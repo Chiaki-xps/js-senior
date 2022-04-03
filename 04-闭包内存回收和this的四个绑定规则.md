@@ -12,6 +12,9 @@
 function createFnArray() {
     // Array类可以传入长度，fill()用于填充
     // 这里填充的1在内存中int类型，相当于4个字节
+    // 理论上 1是数据类型是number，相当于一个number类型占据8byte
+    // 但是实际我们的V8js引擎为了提高空间利用率，当我们的数据很小的时候，会改成4个字节
+    // 小的数字类型，在v8中成为Sim，小叔子 2的32次方 就是4字节
     var arr = new Array(1024 * 1024).fill(1) // 4M大小
     return function() {
         console.log(arr.length)
@@ -366,7 +369,7 @@ obj2.bar() //obj2
   + 这两个函数的第一个参数都要求是一个对象，这个对象的作用是什么呢？就是给`this`准备的。
   + 在调用这个函数时，会将this绑定到这个传入的对象上。
 
-#### apply-call-bind
+#### apply-call
 
 ```js
 function foo() {
@@ -381,12 +384,82 @@ var obj = {
     name: 'onj'
 }
 
-// 直接使用call,apply发起函数调用，手动指定this指向
+// 1. 直接使用call,apply发起函数调用，手动指定this指向
 foo.call(obj) // {name: 'obj'}
 foo.apply(obj) // {name: 'obj'}
 foo.apply('aaaa') // S
 
+// 2. call和apply有什么区别？
+function sum(num1, num2, num3) {
+    console.log(num1 + num2 + num3, this)
+}
+
+// call第一个参数是绑定得对象，后面剩余参数是按照函数顺序传入，逗号分隔开
+sum.call('call', 20, 30, 40)
+// call第一个参数是绑定得对象，后面剩余参数是用数组传入
+sum.apply('apply',[20, 30, 40])
+
+// 3. callge apply在执行函数时，是可以明确得绑定this，这个就是显示绑定
 ```
+
+#### bind
+
+```js
+function foo() {
+    console.log(this)
+}
+
+// 假如我们每次调用foo的同时希望绑定字符串'aaa'
+foo.call('aaa')
+foo.call('aaa')
+foo.call('aaa')
+foo.call('aaa')
+
+// 这样写显得很麻烦，可以优化
+// bind会绑定this且返回一个新的函数
+var newFoo = foo.bind('aaa')
+
+newFoo() //虽然看起来像是一个独立函数调用，但是由于调用之前，已经显示bind的关系，里面的this已经绑定了'aaa'
+// 这个场景可以理解成，默认绑定和bind绑定冲突的时候，优先级（显示绑定更高）
+```
+
+#### new绑定
+
++ JavaScript中的函数可以当做一个类的构造函数来使用，也就是使用new关键字
++ 使用new关键字来调用函数，会执行如下的操作：
+  1. 创建一个全新的对象；
+  2. 这个新对象会被执行prototype连接
+  3. 这个心滴血会绑定到函数调用的this上（this的绑定在这个步骤完成）；
+  4. 如果函数没有返回其他对象，表达式会返回这个新对象。
+
+```js
+// 我们通过一个new关键字调用一个函数时间（构造器），这个时候this是在调用这个构造器时创建出来的对象
+// 等价于 this = 创建出来的对象
+// 这个绑定过程就是new绑定。
+
+// 一般函数当成构造器的话写大写
+function Person() {
+    return this
+}
+
+// 使用new调用Person函数，会自动生成新的对象，并且赋值给Person函数中的this，等到最后，会把这个新对象返回，然后我们的p拿到这个对象
+var p = new Person()
+
+
+function Person(name, age) {
+	this.name = name
+    this.age = age
+}
+    
+var p1 = new Person('why', 18)
+var p2 = new Person('kobe', 30)
+```
+
+
+
+
+
+
 
 
 
