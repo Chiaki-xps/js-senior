@@ -924,7 +924,7 @@ Object.defineProperty(foo.prototype, "constructor", {
 
 ![4](08-with-eval-严格模式-面向对象一.assets/4.png)
 
-#### 2. 创建对象方案优化，原型和构造函数
+#### 2. 创建对象方案优化，原型和构造函数组合
 
 ```js
 function Person(name, age, height, address) {
@@ -957,9 +957,39 @@ p2.eating()
 + 事实上原型对象上面是有一个属性的：constructor
   + 默认情况下原型上都会添加一个属性叫做constructor，这个`constructor`指向当前的函数对象；
 
+```js
+function Person() {}
 
+console.log(Person.prototype.constructor) // [Function: Person]
+console.log(p1.__proto__.constructor) // [Function: Person]
+console.log(p1.__proto__.constructor.name) // Person
+```
 
+### 3. 重写原型对象
 
++ 如果我们需要在原型上添加过多的属性，通常我们会重新整个原型对象：
+
+```js
+function Person() {}
+
+Person.prototype = {
+    // 重新写一个对象，然后赋值给到
+}
+```
+
++ 前面我们说过, 每创建一个函数, 就会同时创建它的prototype对象, 这个对象也会自动获取constructor属性；
+  + 而我们这里相当于给prototype重新赋值了一个对象, 那么这个新对象的constructor属性, 会指向Object构造函数, 而不是Person构造函数了
+
++ 如果希望constructor指向Person，那么可以手动修改：`constructor: Person`
+  + 原生的constructor属性是不可枚举的。但是对象中定义的constructor的[[Enumerable]]特性被设置了true。
+  + 如果希望解决这个问题, 就可以使用我们前面介绍的Object.defineProperty()函数了.
+
+```js
+Object.defineProperty(Person.prototype, "constructor", {
+    enumerable: false,
+    value: Person
+})
+```
 
 
 
