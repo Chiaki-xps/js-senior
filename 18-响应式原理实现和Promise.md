@@ -772,9 +772,9 @@ promise.then(res => {
 
 ## 12. resolve方法
 
-+ 前面我们学习的then、catch、finally方法都属于Promise的实例方法，都是存放在Promise的prototype上的。
++ **前面我们学习的then、catch、finally方法都属于Promise的实例方法，都是存放在Promise的prototype上的。**
 
-  + 下面我们再来学习一下Promise的类方法。
+  + 下面我们再来学习一下**Promise的类方法。**
 
 + 有时候我们已经有一个现成的内容了，希望将其转成Promise来使用，这个时候我们可以使用`Promise.resolve` 方法来完成。
 
@@ -867,11 +867,21 @@ promise.then(res => {
 
 
 
+## 2. 可迭代对象
+
++  但是上面的代码整体来说看起来是有点奇怪的：
+  + 我们获取一个数组的时候，需要自己创建一个index变量，再创建一个所谓的迭代器对象；
+  + 事实上我们可以对上面的代码进行进一步的封装，让其变成一个可迭代对象；
++ 什么又是可迭代对象呢？
+  + 它和迭代器是不同的概念；
+  + 当一个对象实现了iterable protocol协议时，它就是一个可迭代对象；
+  + 这个对象的要求是必须实现@@iterator 方法，在代码中我们使用Symbol.iterator 访问该属性；
++ 当我们要问一个问题，我们转成这样的一个东西有什么好处呢？
+  + 当一个对象变成一个可迭代对象的时候，进行某些迭代操作，比如`for...of`操作时，其实就会调用它的`@@iterator` 方法；
 
 
 
-
-
+# await-async-事件循环
 
 
 
