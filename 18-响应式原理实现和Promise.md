@@ -788,11 +788,42 @@ promise.then(res => {
   + 情况二：参数本身是Promise
   + 情况三：参数是一个thenable
 
+```js
+function foo() {
+    const obj = { name: 'why' } 
+    //转成promise对象返回出去
+    // 方法一：
+    return new Promise((resolve) => {
+        resolve(obj)
+    })
+}
 
+foo().then(res => {
+    console.log('res', res)
+})
 
+// 方法二：
+// 1. 普通的值
+const promise = Promise.resolve({name: 'why'})
+// 等价于
+const promise2 = new Promise((resolve, reject) => {
+    resolve({name: 'why'})
+})
 
+// 2. 传入promise
+const promise = new Promise(new Promise((reslove, reject) => {
+    resolve('1111')
+}))
 
+// 3. thenable
+...
 
+// 读取里面
+promise.then(res => {
+    console.log("res", res)
+})
+
+```
 
 ## 13. reject方法
 
@@ -803,87 +834,351 @@ promise.then(res => {
 
 + `Promise.reject`传入的参数无论是什么形态，都会直接作为reject状态的参数传递到catch的。
 
+```js
+// 相当于生成一个promise，但是被reject调用了
+Promise.reject("reject message")
+// 相当于
+const promise2 = new Promise((resolve, reject) => {
+    reject("reject message")
+})
 
+// 注意reject无论传入什么都是一样的
+const promise = Promise.reject({
+    then: function(resolve, reject) {
+        resolve('1111')
+    }
+})  // 最终结果 err: {tehn: [Fucntion: then]}
+// 无论传入什么，都当成普通的直接回调err，打印出来。
 
+// 传入promise都是直接打印出来
+const promise = Promise.reject(new Promise (() => {}))
+// 结果err: Promise {<pending>}
 
+Promise.then(res => {
+    console.log('res', res)
+}).catch(err => {
+    console.log("err", err)
+})
+
+```
 
 ## 14. all方法
 
-+ 另外一个类方法是Promise.all：
++ 另外一个类方法是`Promise.all`：
   + 它的作用是将多个Promise包裹在一起形成一个新的Promise；
   + 新的Promise状态由包裹的所有Promise共同决定：
     + 当所有的Promise状态变成fulfilled状态时，新的Promise状态为fulfilled，并且会将所有Promise的返回值组成一个数组；
     + 当有一个Promise状态为reject时，新的Promise状态为reject，并且会将第一个reject的返回值作为参数；
 
+```js
+const p1 = new Promise((resolve, reject) => {
+    setTimeout(() => {
+        resolve(11111)
+    }, 1000)
+})
 
+const p2 = new Promise((resolve, reject) => {
+    setTimeout(() => {
+        resolve(22222)
+    }, 2000)
+})
 
+const p3 = new Promise((resolve, reject) => {
+    setTimeout(() => {
+        resolve(33333)
+    }, 3000)
+})
 
+// 需求：所有的Promise都变成fulfilled时，再拿到结果
+// 1. 传入一个数组，每个内容都是一个Promise，如果不是就转成Promise，通过调用Promise.resolve()
+// 2. 返回的也是Promise里面是一个数组保存各个Promise的结果，是写入的Promise数组的顺序
+
+// 3. 意外：在拿到所有结果之前，有一个promise变成了rejected，那么整个promise是rejected
+Promise.add([p1, p2, p3, 'aaaa']).then(res => {
+    console.log(res) //
+}).catch(err => {
+    console.log(err)
+})
+[11111, 22222, 33333, 'aaaa']
+```
 
 ## 15. allSettled方法
 
++ all方法有一个缺陷：当有其中一个Promise变成reject状态时，新Promise就会立即变成对应的reject状态。
+  + 那么对于resolved的，以及依然处于pending状态的Promise，我们是获取不到对应的结果的；
++ 在ES11（ES2020）中，添加了新的API Promise.allSettled：
+  + 该方法会在所有的Promise都有结果（settled），无论是fulfilled，还是reject时，才会有最终的状态；
+  + 并且这个Promise的结果一定是fulfilled的；
 
+![image-20220418170548386](18-响应式原理实现和Promise.assets/image-20220418170548386.png)
 
++ 我们来看一下打印的结果：
+  + `allSettled`的结果是一个数组，数组中存放着每一个Promise的结果，并且是对应一个对象的；
+  + 这个对象中包含status状态，以及对应的value值；
 
+```js
+const p1 = new Promise((resolve, reject) => {
+    setTimeout(() => {
+        resolve(11111)
+    }, 1000)
+})
+
+const p2 = new Promise((resolve, reject) => {
+    setTimeout(() => {
+        reject(22222)
+    }, 2000)
+})
+
+const p3 = new Promise((resolve, reject) => {
+    setTimeout(() => {
+        resolve(33333)
+    }, 3000)
+})
+
+// allSettled等所有都有结果后，调用我们的then
+Promise.allSettled([p1,p2,p3]).then(res => {
+    console.log(res)
+}).catch(err => {
+    // allSettled不会来到catch里面
+    console.log(err)
+})
+// 结果
+[
+    {status: 'fufilled', value: 1111},
+    {status: 'rejected', reason: 2222},
+    {status: 'fulfilled', value: 3333}
+]
+
+```
 
 ## 16.race方法
 
 + 如果有一个Promise有了结果，我们就希望决定最终新Promise的状态，那么可以使用race方法：
   + race是竞技、竞赛的意思，表示多个Promise相互竞争，谁先有结果，那么就使用谁的结果；
+  + 如果竞赛得到的第一个结果是reject，那么得到的结果是reject
 
+```js
+// 创建多个Promise
+const p1 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve(11111)
+  }, 3000);
+})
 
+const p2 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    reject(22222)
+  }, 500);
+})
+
+const p3 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve(33333)
+  }, 1000);
+})
+
+// race: 竞技/竞赛
+// 只要有一个Promise变成fulfilled状态, 那么就结束
+// 意外: 如果竞赛得到的第一个结果
+Promise.race([p1, p2, p3]).then(res => {
+  console.log("res:", res)
+}).catch(err => {
+  console.log("err:", err)
+})
+
+```
+
+如果竞赛过程中，我想要的就是必须拿到一个结果，而不是拿到一个reject，那么就需要用到any
 
 ## 17. any方法
 
 + any方法是ES12中新增的方法，和race方法是类似的：
   + any方法会等到一个fulfilled状态，才会决定新Promise的状态；
   + 如果所有的Promise都是reject的，那么也会等到所有的Promise都变成rejected状态；
-+ 如果所有的Promise都是reject的，那么会报一个AggregateError的错误。
++ 如果所有的Promise都是reject的，那么会报一个`AggregateError`的错误。
+  + 内部实现了`reject(new AggregateError(['错误信息']))`
+  + 可以通过`err.errors`拿到里面的错误信息
+
+```js
+// 创建多个Promise
+const p1 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    // resolve(11111)
+    reject(1111)
+  }, 1000);
+})
+
+const p2 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    reject(22222)
+  }, 500);
+})
+
+const p3 = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    // resolve(33333)
+    reject(3333)
+  }, 3000);
+})
+
+// any方法
+Promise.any([p1, p2, p3]).then(res => {
+  console.log("res:", res)
+}).catch(err => {
+  console.log("err:", err.errors)
+})
 
 
+```
+
+# 2. 手写Promise
+
+参考默认的标准
+
+```js
+// ES6 ES2015
+// https://promisesaplus.com/
+```
+
+## 1. 结构涉及
+
+```js
+// ES6 ES2015
+// https://promisesaplus.com/
+const PROMISE_STATUS_PENDING = 'pending'
+const PROMISE_STATUS_FULFILLED = 'fulfilled'
+const PROMISE_STATUS_REJECTED = 'rejected'
+
+class HYPromise {
+  // executor参数用于接收我们传入的回调函数，在这里Promise固定传入(resolve, reject) => {}
+  // new一个class的时候，就会执行里面的构造函数constructor
+  constructor(executor) {
+    // 表示状态
+    this.status = PROMISE_STATUS_PENDING
+    // 保存值
+    this.value = undefined
+    this.reason = undefined
+
+    // 当reject状态就不执行resolve
+    const resolve = (value) => {
+      if (this.status === PROMISE_STATUS_PENDING) {
+        this.status = PROMISE_STATUS_FULFILLED
+        this.value = value
+        console.log("resolve被调用")
+      }
+    }
+
+    const reject = (reason) => {
+      if (this.status === PROMISE_STATUS_PENDING) {
+        this.status = PROMISE_STATUS_REJECTED
+        this.reason = reason
+        console.log("reject被调用")
+      }
+    }
+
+    // 这里给传入的回调函数传入resolve和reject
+    executor(resolve, reject)
+  }
+}
+
+// new的过程会执行里面的回调函数
+const promise = new HYPromise((resolve, reject) => {
+  console.log("状态pending")
+  resolve(1111)
+  reject(2222)
+})
+
+promise.then(res => {
+
+}, err => {
+
+})
+
+window.onclick = function() {
+  
+}
+
+```
+
+## 2. then方法实现
+
+```js
+// ES6 ES2015
+// https://promisesaplus.com/
+const PROMISE_STATUS_PENDING = 'pending'
+const PROMISE_STATUS_FULFILLED = 'fulfilled'
+const PROMISE_STATUS_REJECTED = 'rejected'
+
+class HYPromise {
+  constructor(executor) {
+    this.status = PROMISE_STATUS_PENDING
+    this.value = undefined
+    this.reason = undefined
+
+    const resolve = (value) => {
+      if (this.status === PROMISE_STATUS_PENDING) {
+        this.status = PROMISE_STATUS_FULFILLED
+        // 执行then传进来的回调函数
+
+        // queueMicrotask把函数加入到微任务里面
+        // setTimeout把函数放入到宏任务
+        queueMicrotask(() => {
+          this.value = value
+          this.onFulfilled(this.value)
+        });
+      }
+    }
+
+    const reject = (reason) => {
+      if (this.status === PROMISE_STATUS_PENDING) {
+        this.status = PROMISE_STATUS_REJECTED
+        // 执行then传进来的回调函数
+        queueMicrotask(() => {
+          this.reason = reason
+          this.onRejected(this.reason)
+        })
+      }
+    }
+
+    executor(resolve, reject)
+  }
+
+  // Promise的方法
+  then(onFulfilled, onRejected) {
+    this.onFulfilled = onFulfilled
+    this.onRejected = onRejected
+  }
+}
+
+const promise = new HYPromise((resolve, reject) => {
+  console.log("状态pending")
+  // reject(2222)
+  resolve(1111)
+})
+
+// 调用then方法
+promise.then(res => {
+  console.log("res1:", res)
+  return 1111
+}, err => {
+  console.log("err:", err)
+}).then(res => {
+  console.log("res3:", res)
+})
+
+// promise.then(res => {
+//   console.log("res2:", res)
+// }, err => {
+//   console.log("err2:", err)
+// })
 
 
+```
 
+## 3. then方法优化一
 
-
-# Iterator-Generator
-
-## 1. 什么是迭代器？
-
-+ 迭代器（iterator），是确使用户可在容器对象（container，例如链表或数组）上遍访的对象，使用该接口无需关心对象的内部实现细节。
-  + 其行为像数据库中的光标，迭代器最早出现在1974年设计的CLU编程语言中；
-  + 在各种编程语言的实现中，迭代器的实现方式各不相同，但是基本都有迭代器，比如Java、Python等；
-+ 从迭代器的定义我们可以看出来，迭代器是帮助我们对某个数据结构进行遍历的对象。
-+ 在JavaScript中，迭代器也是一个具体的对象，这个对象需要符合迭代器协议（iterator protocol）：
-  + 迭代器协议定义了产生一系列值（无论是有限还是无限个）的标准方式；
-  + 那么在js中这个标准就是一个特定的next方法；
-
-+ next方法有如下的要求：
-  + 一个无参数或者一个参数的函数，返回一个应当拥有以下两个属性的对象：
-  + done（boolean）
-    + 如果迭代器可以产生序列中的下一个值，则为false。（这等价于没有指定done 这个属性。）
-    + 如果迭代器已将序列迭代完毕，则为true。这种情况下，value 是可选的，如果它依然存在，即为迭代结束之后的默认返回值。
-  +  value
-    + 迭代器返回的任何JavaScript 值。done 为true 时可省略。
-
-
-
-## 2. 可迭代对象
-
-+  但是上面的代码整体来说看起来是有点奇怪的：
-  + 我们获取一个数组的时候，需要自己创建一个index变量，再创建一个所谓的迭代器对象；
-  + 事实上我们可以对上面的代码进行进一步的封装，让其变成一个可迭代对象；
-+ 什么又是可迭代对象呢？
-  + 它和迭代器是不同的概念；
-  + 当一个对象实现了iterable protocol协议时，它就是一个可迭代对象；
-  + 这个对象的要求是必须实现@@iterator 方法，在代码中我们使用Symbol.iterator 访问该属性；
-+ 当我们要问一个问题，我们转成这样的一个东西有什么好处呢？
-  + 当一个对象变成一个可迭代对象的时候，进行某些迭代操作，比如`for...of`操作时，其实就会调用它的`@@iterator` 方法；
-
-
-
-# await-async-事件循环
-
-
+```js
+```
 
 
 
