@@ -270,19 +270,432 @@ foo().catch(err => {
   + 比如网络请求、定时器，我们只需要在特性的时候执行应该有的回调即可；
 
 ```txt
-虽然js是单线程的，但是你在js中执行网络请求或者其他需要耗时的操作，实际上相当于单线程发送一条指令给你的浏览器，最终应该由浏览器去完成网络请求或者计时等，浏览器完成耗时操作的时候，然后返回告诉js线程
+虽然js是单线程的，但是你在js中执行网络请求或者其他需要耗时的操作，实际上相当于单线程发送一条指令给你的浏览器，最终应该由浏览器其他线程去保存回调函数，并完成网络请求或者计时等耗时任务，浏览器完成耗时操作的时候，将回调函数或者结果放入到事件队列里，然后js线程发现事件队列发现里面有东西的时候就会取出来，然后执行。
+js不可能去等到这些耗时操作完成后才继续进行。
 ```
 
-事件循环里有事件队列
+事件循环维护着一个事件队列，事件队列分为宏任务队列和微任务队列
 
 ## 3. 浏览器的事件循环
 
 + 如果在执行JavaScript代码的过程中，有异步操作呢？
   + 中间我们插入了一个setTimeout的函数调用；
   + 这个函数被放到入调用栈中，执行会立即结束，并不会阻塞后续代码的执行；
+  
++ 事件循环
+
+  js线程把耗时操作给到其他线程，其他线程完成耗时操作之后把结果或者回调函数给到存到事件队列里面，js线程会去取事件队列里的东西然后执行，这个闭环的过程就是事件循环。
+
+![image-20220427163725735](22-生成器-async-await-线程.assets/image-20220427163725735.png)
 
 ```js
+
+console.log("script start")
+
+// 业务代码
+// setTimeout是同步的，里面的内容会被异步执行
+setTimeout(function() {
+
+}, 1000)
+
+console.log("后续代码~")
+
+
+console.log("script end")
+
 ```
+
+![image-20220427201035471](22-生成器-async-await-线程.assets/image-20220427201035471.png)
+
+## 4. 宏任务和微任务
+
++ 但是事件循环中并非只维护着一个队列，事实上是有两个队列：
+  + 宏任务队列（macrotask queue）：ajax、setTimeout、setInterval、DOM监听、UI Rendering等
+  + 微任务队列（microtask queue）：Promise的then回调、Mutation Observer API、queueMicrotask()等
++ 那么事件循环对于两个队列的优先级是怎么样的呢？
+  + 1.main script中的代码优先执行（编写的顶层script代码）；
+  + 2.在执行任何一个宏任务之前（不是队列，是一个宏任务），都会先查看微任务队列中是否有任务需要执行
+    + **也就是宏任务执行之前，必须保证微任务队列是空的；**
+    + 如果不为空，那么就优先执行微任务队列中的任务（回调）；
+
+```JS
+setTimeout(() => {
+  console.log("setTimeout")
+}, 1000)
+
+queueMicrotask(() => {
+  console.log("queueMicrotask")
+})
+
+Promise.resolve().then(() => {
+  console.log("Promise then")
+})
+
+// main script 主要脚本，遇到马上执行
+function foo() {
+  console.log("foo")
+}
+
+function bar() {
+  console.log("bar")
+  foo()
+}
+
+bar()
+
+console.log("其他代码")
+
+// bar
+// foo
+// 其他代码
+// queueMicrotask
+// Promise then
+// setTimeout
+```
+
+```js
+setTimeout(function () {
+  console.log("setTimeout1");
+  new Promise(function (resolve) {
+    resolve();
+  }).then(function () {
+    new Promise(function (resolve) {
+      resolve();
+    }).then(function () {
+      console.log("then4");
+    });
+    console.log("then2");
+  });
+});
+
+// 注意new Promise会直接直接里面传入的构造函数
+// 触发resolve之后，then里面的回调函数会被传入到微任务里面。
+new Promise(function (resolve) {
+  console.log("promise1");
+  resolve();
+}).then(function () {
+  console.log("then1");
+});
+
+setTimeout(function () {
+  console.log("setTimeout2");
+});
+
+console.log(2);
+
+queueMicrotask(() => {
+  console.log("queueMicrotask1")
+});
+
+new Promise(function (resolve) {
+  resolve();
+}).then(function () {
+  console.log("then3");
+});
+
+// promise1
+// 2
+// then1
+// queueMicrotask1
+// then3
+// setTimeout1
+// then2
+// then4
+// setTimeout2
+
+```
+
+```js
+async function bar() {
+  console.log("22222")
+  return new Promise((resolve) => {
+    resolve()
+  })
+}
+
+// async默认异步函数的代码不会异步执行，直接按顺序执行。除了在处理await
+// 但是里面有await的时候，会等待await后面的函数完成Promise里resolve函数后继续向下执行
+async function foo() {
+  console.log("111111")
+
+  // await执行
+  await bar()
+
+  console.log("33333")
+  
+  // 上面两行代码可以看成等价于
+  //  await bar() {
+  //      return new Promise((resolve) => {
+  //      	resolve()
+  //		}).then(() => console.log("33333"))
+  //  }
+  // 所以333的部分会加入到微任务里面
+    
+    
+}
+
+// 1. 执行函数foo， 所以第一个打印111111
+foo()
+console.log("444444")
+
+// 111111
+// 2222
+// 444444
+// 33333
+
+```
+
+```js
+async function async1 () {
+  console.log('async1 start')
+  await async2();
+  // 这个会加入到微任务里面
+  console.log('async1 end')
+}
+
+async function async2 () {
+  console.log('async2')
+}
+
+console.log('script start')
+
+setTimeout(function () {
+  console.log('setTimeout')
+}, 0)
+ 
+async1();
+ 
+new Promise (function (resolve) {
+  console.log('promise1')
+  resolve();
+}).then (function () {
+  console.log('promise2')
+})
+
+console.log('script end')
+
+// script start
+// async1 start
+// async2
+// promise1
+// script end
+// async1 end
+// promise2
+// setTimeout
+
+```
+
+```js
+Promise.resolve().then(() => {
+  console.log(0);
+  // 1.直接return一个值 相当于resolve(4)
+  // return 4
+  return Promise.resolve(4)
+}).then((res) => {
+  console.log(res)
+})
+
+Promise.resolve().then(() => {
+  console.log(1);
+}).then(() => {
+  console.log(2);
+}).then(() => {
+  console.log(3);
+}).then(() => {
+  console.log(5);
+}).then(() =>{
+  console.log(6);
+})
+
+// 1.return 4
+// 0
+// 1
+// 4
+// 2
+// 3
+// 5
+// 6
+
+
+```
+
+一开始执行，then放到微任务里，此时第一个Promise放入微任务的代码有打印0和return 4。
+
+然后接着执行下一个Promise，then传入微任务，此时微任务里面再加入一个打印1。加入没有写return意味着默认return undefined。
+
+![image-20220427175110687](22-生成器-async-await-线程.assets/image-20220427175110687.png)
+
+完成第一步后，执行微任务代码，return 4会执行下一个then，打印4的代码加入到微任务里面。
+
+![image-20220427175420213](22-生成器-async-await-线程.assets/image-20220427175420213.png)
+
+![image-20220427175539311](22-生成器-async-await-线程.assets/image-20220427175539311.png)
+
+然后执行打印1，默认返回值return undefined。然后触发后面的then出入微任务，把打印2传入进去。依次执行。
+
+![image-20220427175618486](22-生成器-async-await-线程.assets/image-20220427175618486.png)
+
+```js
+Promise.resolve().then(() => {
+  console.log(0);
+    
+  // 2.return thenable的值,里面的then函数是不会被直接执行，tehable里的then会推到下一次微任务里面执行
+  // 总结：当我们是一个thenable的时候，原生的Promise会给我们多加一层微任务。把thenable里面放入到下一个微任务
+    
+  // 之所以thenable推迟是因为假如thenable出现大量的计算网络请求或者复杂的情况，那么会阻塞，所以决定推迟到下一个微任务中
+  return {
+    then: function(resolve) {
+      // 大量的计算
+      resolve(4)
+    }
+  }
+
+}).then((res) => {
+  console.log(res)
+})
+
+Promise.resolve().then(() => {
+  console.log(1);
+}).then(() => {
+  console.log(2);
+}).then(() => {
+  console.log(3);
+}).then(() => {
+  console.log(5);
+}).then(() =>{
+  console.log(6);
+})
+
+// 0
+// 1
+// 2
+// 4
+// 3
+// 5
+// 6
+```
+
+一开始执行
+
+![image-20220427195842446](22-生成器-async-await-线程.assets/image-20220427195842446.png)
+
+thenable内容会放入到下一次微任务里，所以第一次执行完微任务，变成
+
+![image-20220427195940898](22-生成器-async-await-线程.assets/image-20220427195940898.png)
+
+之后执行完0，再1，触发then打印2加入微任务，resolve(4)触发下一个then，打印4加入。
+
+![image-20220427200048014](22-生成器-async-await-线程.assets/image-20220427200048014.png)
+
+最后就
+
+![image-20220427200101262](22-生成器-async-await-线程.assets/image-20220427200101262.png)
+
+```js
+Promise.resolve().then(() => {
+  console.log(0);
+
+  // 3.return Promise
+  // 不是普通的值, 多加一次微任务
+  // Promise.resolve(4), 再加一次微任务
+  // 一共多加两次微任务
+  return Promise.resolve(4)
+}).then((res) => {
+  console.log(res)
+})
+
+Promise.resolve().then(() => {
+  console.log(1);
+}).then(() => {
+  console.log(2);
+}).then(() => {
+  console.log(3);
+}).then(() => {
+  console.log(5);
+}).then(() =>{
+  console.log(6);
+})
+
+// 3.return promise
+// 0
+// 1
+// 2
+// 3
+// 4
+// 5
+// 6
+
+// 总结就是thenable会把执行的结果推迟一步
+// Promise会再推迟两步
+```
+
+## 5. Node的事件循环
+
++ 浏览器中的EventLoop是根据HTML5定义的规范来实现的，不同的浏览器可能会有不同的实现，而Node中是由libuv实现的。
+
++ 这里我们来给出一个Node的架构图：
+  + 我们会发现libuv中主要维护了一个EventLoop和worker threads（线程池）；
+  + EventLoop负责调用系统的一些其他操作：文件的IO、Network、child-processes等
++ libuv是一个多平台的专注于异步IO的库，它最初是为Node开发的，但是现在也被使用到Luvit、Julia、pyuv等其他地方；
+
+![image-20220427201142042](22-生成器-async-await-线程.assets/image-20220427201142042.png)
+
+```js
+node执行程序
+会开启一个线程
+node是属于多线程
+其中有一个就是js线程->执行js代码
+node其他线程会帮助完成一些耗时操作，网络请求、文件读取、(IO操作)
+
+```
+
+![image-20220427203115209](22-生成器-async-await-线程.assets/image-20220427203115209.png)
+
+## 6. Node事件循环的阶段
+
++ 我们最前面就强调过，**事件循环像是一个桥梁**，是连接着应用程序的JavaScript和系统调用之间的通道：
+
+  + 无论是我们的文件IO、数据库、网络IO、定时器、子进程，在完成对应的操作后，都会将对应的结果和回调函
+    数放到事件循环（任务队列）中；
+  + 事件循环会不断的从任务队列中取出对应的事件（回调函数）来执行；
+
++ 但是一次完整的事件循环Tick分成很多个阶段：
+
+  + 定时器（Timers）：本阶段执行已经被setTimeout() 和setInterval() 的调度回调函数。
+  + 待定回调（Pending Callback）：对某些系统操作（如TCP错误类型）执行回调，比如TCP连接时接收到ECONNREFUSED。
+
+  + idle, prepare：仅系统内部使用。
+  + 轮询（Poll）：检索新的I/O 事件；执行与I/O 相关的回调；
+  + 检测（check）：setImmediate() 回调函数在这里执行。
+  + 关闭的回调函数：一些关闭的回调函数，如：socket.on('close', ...)。
+
+## 7. Node事件循环的阶段图解
+
+![image-20220427202036801](22-生成器-async-await-线程.assets/image-20220427202036801.png)
+
+
+
+## 8. Node的宏任务和微任务
+
++ 我们会发现从一次事件循环的Tick来说，Node的事件循环更复杂，它也分为微任务和宏任务：
+  + 宏任务（macrotask）：setTimeout、setInterval、IO事件、setImmediate、close事件；
+  + 微任务（microtask）：Promise的then回调、process.nextTick、queueMicrotask；
+
++ 但是，Node中的事件循环不只是微任务队列和宏任务队列：
+  + 微任务队列：
+    + next tick queue：process.nextTick；
+    + other queue：Promise的then回调、queueMicrotask；
+  + 宏任务队列：
+    + timer queue：setTimeout、setInterval；
+    + poll queue：IO事件；
+    + check queue：setImmediate；
+    + close queue：close事件；
+
+
+
+
+
+略
 
 
 
