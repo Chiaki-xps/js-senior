@@ -15,7 +15,30 @@
   + 当遇到throw语句时，当前的函数执行会被停止（throw后面的语句不会执行）；
 + 如果我们执行代码，就会报错，拿到错误信息的时候我们可以及时的去修正代码。
 
+```js
+/**
+ * 如果我们有一个函数, 在调用这个函数时, 如果出现了错误, 那么我们应该是去修复这个错误.
+ */
 
+function sum(num1, num2) {
+  // 当传入的参数的类型不正确时, 应该告知调用者一个错误
+  if (typeof num1 !== "number" || typeof num2 !== "number") {
+    // return undefined
+    throw "parameters is error type~"
+  }
+
+  return num1 + num2
+}
+
+// 调用者(如果没有对错误进行处理, 那么程序会直接终止)
+// console.log(sum({ name: "why" }, true))
+console.log(sum(20, 30))
+
+console.log("后续的代码会继续运行~")
+
+// throw会中断代码运行
+
+```
 
 ## 2. throw关键字
 
@@ -30,9 +53,66 @@
 
 ![image-20220428172957658](24-异常处理-CommonJS模块化解析.assets/image-20220428172957658-16511381984831.png)
 
+```js
+// class HYError {
+//   constructor(errorCode, errorMessage) {
+//     this.errorCode = errorCode
+//     this.errorMessage = errorMessage
+//   }
+// }
+
+function foo(type) {
+  console.log("foo函数开始执行")
+
+  if (type === 0) {
+    // 1.抛出一个字符串类型(基本的数据类型)
+    // throw "error"
+
+    // 2.比较常见的是抛出一个对象类型,对象可以包含更多信息
+    // throw { errorCode: -1001, errorMessage: "type不能为0~" }
+
+    // 3.创建类, 并且创建这个类对应的对象
+    // throw new HYError(-1001, "type不能为0~")
+
+    // 4.js提供了一个Error
+    // const err = new Error("type不能为0")
+    // err.name = "why" // 默认Err
+    // err.stack = "aaaa" // stack报错出现出现错误的函数的调用栈
+
+    // 5.Error的子类
+    const err = new TypeError("当前type类型是错误的~")
+
+    throw err
+
+    // 强调: 如果函数中已经抛出了异常, 那么后续的代码都不会继续执行了
+    console.log("foo函数后续的代码")
+  }
+
+  console.log("foo函数结束执行")
+}
+
+foo(0)
+
+console.log("后续的代码继续执行~")
 
 
+// 这里就是就会出现函数调用栈
+// test出现错误的，就会打印调用它的demo，demo会找到调用它的bar，最终找到bar() 的一整个栈就是函数调用栈
+// function test() {
+//   console.log("test")
+// }
 
+// function demo() {
+//   test()
+// }
+
+// function bar() {
+//   demo()
+// }
+
+// bar()
+
+```
 
 ## 3. Error类型
 
@@ -49,11 +129,7 @@
   + SyntaxError：解析语法错误时使用的错误类型；
   + TypeError：出现类型错误时，使用的错误类型；
 
-
-
-
-
-
+![image-20220504232315755](24-异常处理-CommonJS模块化解析.assets/image-20220504232315755.png)
 
 ## 4. 异常的处理
 
@@ -65,6 +141,9 @@
   + 但是bar函数并没有对这个异常进行处理，那么这个异常就会被继续传递到调用bar函数的函数，也就是test函数；
   + 但是test函数依然没有处理，就会继续传递到我们的全局代码逻辑中；
   + 依然没有被处理，这个时候程序会终止执行，后续代码都不会再执行了；
+
+```js
+```
 
 
 
