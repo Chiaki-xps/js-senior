@@ -20,7 +20,7 @@ npm install -g nodemon
 
 ```
 
-## 2. 基本数据类型
+## 2. 基本数据类型（基本类型注解）
 
 ```typescript
 // 基本数据类型
@@ -292,9 +292,304 @@ type Foo = string | number | boolean;
 
 ## 8. any
 
++ TypeScript中任何类型都可以被归为any类型。
++ any类型则允许被赋值为任意类型。
++ any类型任何属性都是允许被访问，允许调用任何办法。
++ **变量如果在声明的时候，未指定其类型，那么它会被识别为任意值类型**
+
+## 9. unknown
+
++ unknown与any一样，所有类型可以分配给unknown；
++ 任何类型的值可以赋值给`any`，同时`any`类型的值也可以赋值给任何类型。`unknown` 任何类型的值都可以赋值给它，但它只能赋值给`unknown`和`any`
+
+```typescript
+// unkonwn赋值给any
+let notSure: unknown = 4;
+let uncertain: any = notSure; // OK
+
+// any赋值给unknown
+let notSure1: any = 4;
+let uncertain1: unknown = notSure; // OK
+let foo:number = notSure1 // unknown不可以赋值给其他类型
+
+// any可以赋值给任何类型
+let notSure2: any = 4;
+let bar: string = notSure2
+
+console.log(bar);
+
+```
+
+## 10. 大小写
+
++ 原始类型number、string、symbol有对应的包装器对象Number、Boolean、Symbol类型（暂时称之为对象类型）。
++ 但是包装器对象不能赋值给对应数据类型
+
+![image-20220516113351670](typeScript笔记.assets/image-20220516113351670.png)
+
+## 11. object、Object和{}
+
++ 小写`object`表示所有非原始类型，即number、string、symbol不能赋值给object类型。严格模式下`null`和`undefined`类型也不能赋值给oject。
++ 大写`Object`代表所有拥有`toString`、`hasOwnProperty`方法的类型，所以所有基本原始类型、非原始类型都可以赋值给`Object`。严格模式下，`null`和`undefined`类型不能赋值Object
+
++ 可以看出`Object`是`obejct`的父类型，同时也是`object`的子类型。
++ 官网文档说小object可以替代Object，但是两者并不等价,因为基本类型不能赋值`object`.`Obejct`更宽泛。
+
++ `{}`和`Object`都表示原始类型的集合，在严格模式下`null`和`undefined`类型不能赋值`{}`
+
+```typescript
+type a = object extends Object ? true : false; // true
+type b = Object extends object ? true : false; // true
+
+```
+
+## 12. 类型推断
+
++ 会根据初始化值进行推断类型
++ 根据参数类型推断返回类型
++ 没有初始化就推断成any
+
+## 13. 类型断言
+
++ ts是静态类型，所以往往对运行时的逻辑无能为力，就会出现一个警告。
++ 类型断言：仅作用在类型层面的强制类型转换
+
+```typescript
+// 1. 使用<>类型断言
+let value: any = "sen";
+// <类型>转换类型的变量
+let strLength: number = (<string>value).length;
+
+// 2. as
+// 变量 as 转换的类型
+let strLength1: number = (value as string).length;
+
+```
+
+## 14. 非空断言
+
++ 使用`!`用于断言操作对象是非`null`和`undefined`类型
++ 格式`x!`。
+
+```typescript
+let a: null | undefined | string;
+// a.toString() // Error
+a!.toString() // ok
+
+```
+
+## 15. 确定赋值断言
+
+```js
+let a: number;
+let b:number = a
+
+// 编译过程后出现错误，因为ts希望我们初始化值之后，变量才被使用
+```
+
+```typescript
+let x: number;
+// 初始化x
+initialize();
+
+// 由于初始化是在运行阶段才能，静态编译阶段就报错了
+// Variable 'x' is used before being assigned.(2454)
+console.log(2 * x); // Error
+function initialize() {
+  x = 10;
+}
+
+// 但是实际上我们在使用x前，我们已经初始化了
+// 在实例属性或者定义变量声明的时候使用!表示明确后续会被赋值。 避免这种错误
+// 格式x！
+// 这样子x就会明确它后续会被赋值
+let x! : number
+
+```
+
+## 16. 字面量类型
+
++ 字面量不仅可以表示值，还可以表示类型，即所谓的字面量类型。
++ TS支持3种字面量类型：字符串字面量类型、数字字面量类型、布尔字面量类型，对应的字符串字面量、数字字面量、布尔字面量分别拥有与其值一样的字面量类型。（意思是值必须和字面量一样才能被赋值）
+
+```typescript
+let a: "sen" = "sen";
+// a = 'xu' // error
+let b: 1 = 1;
+let c: true = true;
+
+let d: string;
+// a本事也是string类型。但是d是string类型，但是不一定内容等价于a的字面量类型
+d = a;
+
+```
+
+## 17. 字符串、数字、布尔类型字面量类型
+
++ 定义字符串字面量类型作为变量的类型，作用不大，但更多的时候用于联合类型。这样可以限制参数或变量为指定的具体的字符串。增加可读性保证类型。
+
+## 18. let const
+
+```typescript
+// 因为我们cosnt是不可变的，所以推断类型为字面量类型'sen'
+const str = 'sen' // str: 'sen'
+
+// 因为let定义的变量是可变的，所以ts会对赋值的字面量类型进行一个类型拓宽推断为父类型string
+let str2 = 'sen' // str: srting
+
+```
+
+## 19. 类型拓宽
+
+```typescript
+// 1. 
+// str根据内容推断类型至少是'sen',然后再字面量类型类型拓宽为其父类型string
+let str = 'sen'
+
+// 函数参数
+// 如果有默认参数，会根据类型推断比如
+function foo (str = 'sen'):string {
+    return str
+}
+// 因为有默认值，所以是可选类型，并且参数是可改变的，所以进行类型拓宽
+// str推断为str ?: string | undefined
+
+```
+
+```typescript
+// 因为const是常量，所以不会再改变，所以推断基本类型的时候，没有进行类型拓宽
+// 结果str:'sen'
+const str = 'sen'
+
+// 由于let定义的变量是可以被改变的，所以可以被类型拓宽
+let str2 = str
+
+```
+
++ 如果我们想要限制类型拓宽，就要使用显示注解
+
+```typescript
+const a:'sen' = 'sen'
+// 即使使用了let定义，但是a明确为'sen'，所以b推断也为明确的类型'sen'
+let b = a  // b:'sen'
+
+// 区别
+const a = 'sen'
+const b = a // b:string
+
+```
+
++ `null`和`undefined`的类型进行拓宽，通过`let`、`var`定义的类型如果满足未显示声明类型注解且被赋予`null`或`undefined`值，则推断为类型是`any`
+  + 严格模式下，null和undefined不会拓宽成`any`
+
+```typescript
+let x = null // 类型 x:any
+let y = undefined // 类型 y:any
+
+const z = null // 类型 z:null
+
+let anyFun = (param = null) => param // 形参 param:any
+
+```
+
+案例分析
+
+```typescript
+```
 
 
-https://juejin.cn/post/7018805943710253086#heading-31
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 20. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+笔记链接
+
+```http
+https://juejin.cn/post/7018805943710253086
+```
+
+联系题目-未作
+
+```http
+https://github.com/semlinker/awesome-typescript/issues
+```
+
+
 
 https://juejin.cn/post/6876240277208563720
 
