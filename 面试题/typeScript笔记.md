@@ -840,7 +840,7 @@ a = ro; // error!
 
 ```
 
-## 2. 任意属性
+### 2. 任意属性
 
 + 可以使用**索引签名**表示还可以运行其他的任意属性
   + **一旦定义了任意属性，那么确定属性和可选属性的类型都必须是它的类型的子集**
@@ -908,7 +908,7 @@ let tom: Person = {
 
 ```
 
-## 3. 鸭子辨型法
+### 3. 鸭子辨型法
 
 ```typescript
 interface labeledObj {
@@ -942,17 +942,16 @@ let sen = {
 
 let a:labeledObj = sen
 
+// a属于labeledobj，所以虽然赋值sen上有value，但是不能使用
+a.value = 2
+
 console.log(a)
 
 // 不难发现我们sen的类型为{key: string; value: number }、
 // 并将该类型赋值给了类型为labeledObj的a
-// 显然sen的内容是不符labeledObj的接口类型要求的，
+// 显然sen的内容是不符labeledObj的接口类型要求的，但是赋值给a的时候，a要求只要有内容{key:string}，但是你给我的变量sen给的更多，所以来者不拒。我的变量a在使用的时候，任然按照labeledobj的要求。这就是鸭子类型
 
 ```
-
-
-
-
 
 ```typescript
 interface LabeledValue {
@@ -971,7 +970,390 @@ printLabel({ size: 10, label: "Size 10 Object" }); // Error
 
 ```
 
-+ 定义的`myObj`显然不符合我们接口`LabeledValue`，但是当你作为参数传入`labeledObj`
++ 定义的`myObj`显然不符合我们接口`LabeledValue`，但是当你作为参数传入`labeledObj`的时候，比我需要的内容要多，而我使用仍然按照`LabelValue`进行使用，你给我的传入的参数，能用，且绝不会报错，那就用着呗。看着像鸭子就是鸭子。
+
+### 4. 鸭子辨型法
+
++ 被赋值的变量能够实现这个接口，就认为他是鸭子。
+
+```typescript
+interface LabeledValue {
+  label: string;
+}
+
+function printLabel(labelObj: LabeledValue) {
+  console.log(labelObj.label);
+}
+
+let myObj = { size: 10, label: "Size 10 Objec" };
+printLabel(myObj) // Ok
+
+
+// 对比
+interface LabeledValue {
+  label: string;
+}
+function printLabel(labeledObj: LabeledValue) {
+  console.log(labeledObj.label);
+}
+printLabel({ size: 10, label: "Size 10 Object" }); // Error
+
+// 上面之所以报错是因为再传入的参数写对象，相当于直接赋值，此时有严格的类型定义，所以不能多参少参。
+// 那么为什么第一个不报错？
+// 因为你在外面将该参数对象，用另一个变量myObj接受，而myObj不能经过额外属性检查，但会根据类型推断为
+// let myObj: {szie:number, label:string} = {size:10,label:'Size 10 Object'}
+// 然后将这个myObj再赋值给labelObj,此时根据类型的兼容性，两种类型对象，参照[鸭式辨型法]，因为具有label属性，所以认丁为两个相同，孤儿可以用此法绕开多余的类型检查。
+
+```
+
+### 5. 绕开额外类型检查的方式
+
++ 鸭子辨型法
++ 类型断言
+  + 类型断言的意义就等同于你在告诉程序，你很清楚自己在做什么，此时程序自然就不会再进行额外的属性检查了。
+
++ 索引签名
+
+```typescript
+// 类型断言
+interface Props { 
+  name: string; 
+  age: number; 
+  money?: number;
+}
+
+let p: Props = {
+  name: "兔神",
+  age: 25,
+  money: -100000,
+  girl: false
+} as Props; // OK
+
+```
+
+```typescript
+// 索引签名
+interface Props { 
+  name: string; 
+  age: number; 
+  money?: number;
+  [key: string]: any;
+}
+
+let p: Props = {
+  name: "兔神",
+  age: 25,
+  money: -100000,
+  girl: false
+}; // OK
+
+```
+
+## 24. 接口与类型别名的区别
+
++ 在大多数的情况下使用接口类型和类型别名的效果等价，但是在某些特定的场景下这两者还是存在很大区别。
++ TypeScript 的核心原则之一是对值所具有的结构进行类型检查。 而接口的作用就是为这些类型命名和为你的代码或第三方代码定义数据模型。
++ type(类型别名)会给一个类型起个新名字。 type 有时和 interface 很像，但是可以作用于原始值（基本类型），联合类型，元组以及其它任何你需要手写的类型。起别名不会新建一个类型 - 它创建了一个新 名字来引用那个类型。给基本类型起别名通常没什么用，尽管可以做为文档的一种形式使用。
+
+### 1. Objects/Functions
+
++ 接口与类型别名两者可以用来描述对象或函数的类型，但是语法不同
+
++ interface
+
+```typescript
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface SetPoint {
+  (x: number, y: number): void;
+}
+
+```
+
++ Type alias
+
+```typescript
+type Point = {
+  x: number;
+  y: number;
+};
+
+type SetPoint = (x: number, y: number) => void;
+
+```
+
+### 2. Other Types
+
+```typescript
+// primitive 原始
+type Name = string;
+
+// object
+type PartialPointX = { x: number; };
+type PartialPointY = { y: number; };
+
+// union
+type PartialPoint = PartialPointX | PartialPointY;
+
+// tuple
+type Data = [number, string];
+
+// dom
+let div = document.createElement('div');
+type B = typeof div;
+
+```
+
+### 3. 接口可以定义多次，类型别名不可以
+
++ 与类型别名不同，接口可以定义多次，会被自动合并为单个接口。
+
+```typescript
+interface Point { x: number; }
+interface Point { y: number; }
+const point: Point = { x: 1, y: 2 };
+
+```
+
+### 4. 扩展
+
++ 两者的扩展方式不同，但并不互斥。接口可以扩展类型别名，同理，类型别名也可以扩展接口。
++ 接口的扩展就是继承，通过 `extends` 来实现。类型别名的扩展就是交叉类型，通过 `&` 来实现。
+
+```typescript
+// 接口扩展接口
+interface PointX {
+    x: number
+}
+
+interface Point extends PointX {
+    y: number
+}
+
+```
+
+```typescript
+// 类型别名扩展类型别名
+type PointX = {
+    x: number
+}
+
+type Point = PointX & {
+    y: number
+}
+
+```
+
+```typescript
+// 接口扩展类型别名
+type PointX = {
+  x: number
+}
+interface Point extends PointX {
+  y: number
+}
+
+```
+
+```typescript
+// 类型别名扩展接口
+interface PointX {
+    x: number
+}
+type Point = PointX & {
+    y: number
+}
+
+```
+
+## 25. 泛型
+
++ 泛型是一个抽象类型，只有在调用的时候才确定它的值。
+
+```typescript
+// 实现传入一个类型，返回相同的类型
+function identity<T>(arg: T): T {
+    return arg;
+}
+
+```
+
++ `T`代表`<Type>`,在定义泛型时通常用作第一个类型变量名称。但实际上`T`可以用任何有效名称代替。除了`T`之外，一下是常见有效名称替代：
+  + K（key）
+  + V（Value）
+  + E（Element）
+
+![image-20220519160216902](typeScript笔记.assets/image-20220519160216902.png)
+
+![image-20220519160306843](typeScript笔记.assets/image-20220519160306843.png)
+
+```typescript
+function identity <T, U>(value: T, message: U) : T {
+  console.log(message);
+  return value;
+}
+console.log(identity<Number, string>(68, "Semlinker"));
+
+
+// ts会帮助我们自动选择类型，所以可以变化为
+function identity <T, U>(value: T, message: U) : T {
+  console.log(message);
+  return value;
+}
+console.log(identity(68, "Semlinker"));
+
+```
+
+### 1. 泛型约束
+
+```typescript
+function trace<T>(arg: T): T {
+  console.log(arg.size); // Error: Property 'size doesn't exist on type 'T'
+  return arg;
+}
+
+// 报错的原因是因为T理论上可以是任何类型。不同于any，你在不管使用它的什么属性或者方法都会报错（除非这个属性和方法是所有集合共有的）。
+// 那么我们像实现这个具有size的功能，就需要进行类型约束
+// 使用extend，让T实现这个接口即可
+interface Sizeable {
+  size: number;
+}
+function trace<T extends Sizeable>(arg: T): T {
+  console.log(arg.size);
+  return arg;
+}
+
+```
+
+## 26. 泛型工具类型
+
+### 1. typeof
+
++ typeof 的主要用途是在类型上下文中获取变量或者属性的类型，下面我们通过一个具体示例来理解一下。
+
+```typescript
+
+interface Person {
+  name: string;
+  age: number;
+}
+const sem: Person = { name: "semlinker", age: 30 };
+type Sem = typeof sem; // type Sem = Person
+
+const lolo: Sem = { name: "lolo", age: 5 }
+
+```
+
+```typescript
+const Message = {
+  name: "jimmy",
+  age: 18,
+  address: {
+    province: '四川',
+    city: '成都'   
+  }
+}
+type message = typeof Message;
+/*
+type message = {
+  name: string;
+  age: number;
+  address: {
+      province: string;
+      city: string;
+  };
+}
+*/
+
+```
+
++ `typeof` 操作符除了可以获取对象的结构类型之外，它也可以用来获取函数对象的类型
+
+```typescript
+function toArray(x: number): Array<number> {
+  return [x];
+}
+type Func = typeof toArray; // -> (x: number) => number[]
+
+```
+
+### 2. keyof
+
++ `keyof`用于获取某种类型的所有键，其返回类型是联合类型。
+
+```typescript
+interface Person {
+  name: string;
+  age: number;
+}
+
+type K1 = keyof Person; // "name" | "age"
+type K2 = keyof Person[]; // "length" | "toString" | "pop" | "push" | "concat" | "join" 
+type K3 = keyof { [x: string]: Person };  // string | number
+
+```
+
+```typescript
+// K3分析
+// 正常情况下
+let a:string = 'sen'
+let b:number = 1
+a = b //不能将类型“number”分配给类型“string”。 
+
+// 但是在对象中，key值最终会转化成字符串，所以key为number也可以使用
+interface Person {
+  [x:string]: string
+}
+
+let person:Person = {
+  1:'sen'
+}
+
+// 所以最终获取K3的类型为string | number
+// 为了同时支持两种索引类型，就得要求数字索引的返回值必须是字符串索引返回值的子类。其中的原因就是当使用数值索引时，JavaScript 在执行索引操作时，会先把数值索引先转换为字符串索引。所以 keyof { [x: string]: Person } 的结果会返回 string | number。
+
+作者：Jimmy_fx
+链接：https://juejin.cn/post/7018805943710253086
+来源：稀土掘金
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+interface StringArray {
+  // 字符串索引 -> keyof StringArray => string | number
+  [index: string]: string; 
+}
+
+interface StringArray1 {
+  // 数字索引 -> keyof StringArray1 => number
+  [index: number]: string;
+}
+
+```
+
++ keyof也支持基本数据类型
+
+```typescript
+let K1: keyof boolean; // let K1: "valueOf"
+let K2: keyof number; // let K2: "toString" | "toFixed" | "toExponential" | ...
+let K3: keyof symbol; // let K1: "valueOf"
+
+```
+
+```typescript
+```
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
