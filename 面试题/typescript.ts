@@ -1,9 +1,20 @@
-interface vector3 {
-  x: number;
-  y: number;
-  z: number;
+function getValues<T, K extends keyof T>(person: T, keys: K[]): T[K][] {
+  return keys.map(key => person[key]);
 }
 
-function getComponent(vector: vector3, axis: "x" | "y" | "z") {
-  return vector[axis];
+interface Person {
+    name: string;
+    age: number;
 }
+
+const person: Person = {
+    name: 'musion',
+    age: 35
+}
+
+interface a {
+  name: string,
+  age:number
+}
+
+let b: keyof a 

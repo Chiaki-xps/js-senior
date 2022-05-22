@@ -295,6 +295,7 @@ type Foo = string | number | boolean;
 + TypeScript中任何类型都可以被归为any类型。
 + any类型则允许被赋值为任意类型。
 + any类型任何属性都是允许被访问，允许调用任何办法。
++ **TS也会将无法判断的类型认为是any**
 + **变量如果在声明的时候，未指定其类型，那么它会被识别为任意值类型**
 
 ## 9. unknown
@@ -439,7 +440,7 @@ let str2 = 'sen' // str: srting
 
 ```
 
-## 19. 类型拓宽
+## 19. 类型拓宽（Type Widening）
 
 ```typescript
 // 1. 
@@ -495,7 +496,7 @@ let anyFun = (param = null) => param // 形参 param:any
 案例分析：
 
 ```typescript
-// 定义一个获取对应坐标的函数
+// 创建用于获取坐标的值的函数
 interface Vector3 {
   x: number;
   y: number;
@@ -506,13 +507,942 @@ function getComponent(vector: Vector3, axis: "x" | "y" | "z") {
   return vector[axis];
 }
 
-// 使用该函数
+// 使用
 let x = "x";
 let vec = { x: 10, y: 20, z: 30 };
-// 因为使用x的定义使用let，推断为类型“string”， 所以参数不能赋给类型“"x" | "y" | "z"”的参数。
+// 因为定义x使用let，所以类型推断出为string，类型“string”的参数不能赋给字面量类型“"x" | "y" | "z"”的参数。所以报错
 getComponent(vec, x); // Error
 
-// 
+// 升级
+const x = 'x'
+let vec = {x: 10, y:20, z:30}
+getComponent(vec, x);
+
+```
+
+```typescript
+// 在没有更多的上下文的情况下，ts往往对类型推断会存在不明确
+const arr = ['x', 1]
+
+// 类型推断的可能性
+arr: ('x' | 1)[]
+	 ['x', 1]
+	 [string, number]
+	 readonly [string, number]
+	 (string | number)[]
+	 readonly (string | number)[]
+	 [any, any]
+	 any[]
+
+```
+
++ 使用const定义对象的时候
+
+```js
+// js代码
+const obj1 = { 
+  x: 1,
+}; 
+
+obj1.x = 6; 
+obj1.x = '6';
+
+obj1.y = 8;
+obj1.name = 'semlinker';
+
+// 修改obj1的x是不会报错的
+
+```
+
+```typescript
+// ts代码
+// 我们使用const定义obj1的时候，推断类型为{readonly x:1},甚至{x: number}，{[key:string]:number}或者object类型等，然后类型拓宽算法会视obj内部的属性为let声明的变量，最终推断obj1:{x:number}。
+const obj = { 
+  x: 1,
+};
+
+obj.x = 6; // OK 
+
+
+// Type '"6"' is not assignable to type 'number'.
+obj.x = '6'; // Error
+
+// Property 'y' does not exist on type '{ x: number; }'.
+obj.y = 8; // Error
+
+// Property 'name' does not exist on type '{ x: number; }'.
+obj.name = 'semlinker'; // Error
+
+```
+
++ TypeScript 试图在具体性和灵活性之间取得平衡。它需要推断一个足够具体的类型来捕获错误，但又不能推断出错误的类型。它通过属性的初始化值来推断属性的类型，当然有几种方法可以覆盖 TypeScript 的默认行为。一种是提供显式类型注释：
+
+```typescript
+const obj: {x:1 | 3 | 5} = {
+    x : 1
+}
+
+```
+
++ 另一种方法是使用 const 断言。不要将其与 let 和 const 混淆，后者在值空间中引入符号。这是一个纯粹的类型级构造。让我们来看看以下变量的不同推断类型：
+
+```typescript
+// Type is { x: number; y: number; }
+const obj1 = { 
+  x: 1, 
+  y: 2 
+}; 
+
+// Type is { x: 1; y: number; }
+const obj2 = {
+  x: 1 as const,
+  y: 2,
+}; 
+
+// Type is { readonly x: 1; readonly y: 2; }
+const obj3 = {
+  x: 1, 
+  y: 2 
+} as const;
+
+```
+
++ 当你在一个值之后使用 const 断言时，TypeScript 将为它推断出最窄的类型，没有拓宽。对于真正的常量，这通常是你想要的。当然你也可以对数组使用 const 断言：
+
+```typescript
+// Type is number[]
+const arr1 = [1,2,3]
+
+// Type is readonly [1,2,3]
+const arr2 = [1,2,3] as const 
+
+```
+
+## 20. 类型缩小（Type Narrowing）
+
++ 变量的类型由一个宽泛的集合缩小到相对较小、明确的集合--类型缩小
+
+```typescript
+// ts会根据上下文进行更精确的类型推断
+
+// 案例一：
+{
+  let func = (anything: any) => {
+    if (typeof anything === 'string') {
+      return anything; // 类型是 string 
+    } else if (typeof anything === 'number') {
+      return anything; // 类型是 number
+    }
+    return null;
+  };
+}
+
+// 案例二：
+// 我们也可以通过字面量类型等值判断（===）或其他控制流语句（包括但不限于 if、三目运算符、switch 分支）将联合类型收敛为更具体的类型，如下代码所示：
+{
+  type Goods = 'pen' | 'pencil' |'ruler';
+  const getPenCost = (item: 'pen') => 2;
+  const getPencilCost = (item: 'pencil') => 4;
+  const getRulerCost = (item: 'ruler') => 6;
+  const getCost = (item: Goods) =>  {
+    if (item === 'pen') {
+      return getPenCost(item); // item => 'pen'
+    } else if (item === 'pencil') {
+      return getPencilCost(item); // item => 'pencil'
+    } else {
+      return getRulerCost(item); // item => 'ruler'
+    }
+  }
+}
+
+// ts擅长根据上下文进行推断类型，但是也会存在错误
+// 1. 中type null 结果为"object
+const el = document.getElementById("foo"); // Type is HTMLElement | null
+if (typeof el === "object") {
+  el; // Type is HTMLElement | null
+}
+
+// 2. 空字符串和0也会被认为是false
+function foo(x?: number | string | null) {
+  if (!x) {
+    x; // Type is string | number | null | undefined\
+  }
+}
+
+```
+
++ 缩小的方法
+
+```typescript
+// ”标签联合“(”可辨识联合“)在它们上放置一个明确的 “标签”：
+interface UploadEvent {
+  type: "upload";
+  filename: string;
+  contents: string;
+}
+
+interface DownloadEvent {
+  type: "download";
+  filename: string;
+}
+
+type AppEvent = UploadEvent | DownloadEvent;
+
+function handleEvent(e: AppEvent) {
+  switch (e.type) {
+    case "download":
+      e; // Type is DownloadEvent 
+      break;
+    case "upload":
+      e; // Type is UploadEvent 
+      break;
+  }
+}
+
+```
+
+## 21. 联合类型
+
++ 联合类型表示取值可以为多种类型中的一种，使用 `|` 分隔每个类型。
+  + 平时可以指定字面量类型，约束取值为其中一个
+
+## 22. 交叉类型
+
++ 交叉类型是将多个类型合并为一个类型。这让我们可以把现有的多种类型叠加到一起成为一种新类型，它包含了所需的所有类型的特性，使用`&`定义交叉类型。
+
+```typescript
+type Useless = string & number;
+let c: Useless  // 推断 c: never
+
+// 能够同时满足string和number类型是不存在的，所以我们把原始类型、字面量类型、函数类型等原子类型合并成交叉类型是没有任何用处的。所以最终不存在的类型，只能归类为never
+
+```
+
++ 交叉类型真正的用武之地就是将多个接口类型合并成一个类型，从而实现等同接口继承的效果，也就是所谓的合并接口类型，如下代码所示：
+
+```typescript
+type IntersectionType = { id: number; name: string; } & { age: number };
+const mixed: IntersectionType = {
+  id: 1,
+  name: 'name',
+  age: 18
+}
+
+// mixed此时的类型为{ id: number; name: string; age: number; }
+// 少一个属性也不行。
+```
+
++ 问题：如果联合的多个接口类型存在同名属性会怎么样？
+
+```typescript
+  type IntersectionTypeConfict = { id: number; name: string; } 
+  & { age: number; name: number; };
+  const mixedConflict: IntersectionTypeConfict = {
+    id: 1,
+    name: 2, // ts(2322) 错误，'number' 类型不能赋给 'never' 类型
+    age: 2
+  };
+
+// 如果同名属性的类型不兼容，比如上面示例中两个接口类型同名的 name 属性类型一个是 number，另一个是 string，合并后，name 属性的类型就是 number 和 string 两个原子类型的交叉类型，即 never
+
+```
+
+```typescript
+  type IntersectionTypeConfict = { id: number; name: 2; } 
+  & { age: number; name: number; };
+
+  let mixedConflict: IntersectionTypeConfict = {
+    id: 1,
+    name: 2, // ok
+    age: 2
+  };
+  mixedConflict = {
+    id: 1,
+    name: 22, // '22' 类型不能赋给 '2' 类型
+    age: 2
+  };
+//如一个是 number，另一个是 number 的子类型、数字字面量类型，合并后 name 属性的类型就是两者中的子类型。
+
+```
+
++ 那么如果同名属性是非基本数据类型的话
+
+```typescript
+interface A {
+  x:{d:true},
+}
+interface B {
+  x:{e:string},
+}
+interface C {
+  x:{f:number},
+}
+type ABC = A & B & C
+let abc:ABC = {
+  x:{
+    d:true,
+    e:'',
+    f:666
+  }
+}
+
+// 说明相同成员的不同内容合并一起
+```
+
+## 23. 接口（interfaces）
+
++ 在面向对象语言中，接口（Interfaces）是一个很重要的概念，它是对行为的抽象，而具体如何行动需要由类（classes）去实现（implement）。
++ TypeScript 中的接口是一个非常灵活的概念，除了可用于[对类的一部分行为进行抽象]以外，也常用于对「对象的形状（Shape）」进行描述。
+  + 约束定义的变量必须和接口保持一致。
+    + 定义的变量比接口少一些多一些属性是不允许的
+  + 接口一般首字母大写。
+
+```typescript
+interface Person {
+    name: string;
+    age: number;
+}
+
+let tom: Person = {
+    name: 'Tom',
+    age: 25
+};
+
+// 约束了 tom 的形状必须和接口 Person 一致。
+>>>>>>> 3eced4d130853a48b68d14640d76607519101be4
+```
+
+### 1. 可读 | 只读属性
+
++ 只读属性用于限制只能在对象刚刚创建的时候修改其值。
+  + TypeScript 还提供了 `ReadonlyArray<T>` 类型，它与 `Array<T>` 相似，只是把所有可变方法去掉了，因此可以确保数组创建后再也不能被修改。
+
+```typescript
+interface Person {
+  readonly name: string;
+  age?: number;
+}
+
+let person: Person = {
+  name:'sen'
+}
+
+person.name = 'a' //无法分配到 "name" ，因为它是只读属性。ts(2540)
+
+```
+
+```typescript
+let a: number[] = [1, 2, 3, 4];
+let ro: ReadonlyArray<number> = a;
+ro[0] = 12; // error!
+ro.push(5); // error!
+ro.length = 100; // error!
+a = ro; // error!
+
+```
+
+### 2. 任意属性
+
++ 可以使用**索引签名**表示还可以运行其他的任意属性
+  + **一旦定义了任意属性，那么确定属性和可选属性的类型都必须是它的类型的子集**
+  + 一个接口只能定义一个任意属性。如果接口中有多个类型的属性，则可以再任意属性中使用联合类型。
+
+```typescript
+interface Person {
+  // 必选类型
+  name: string;
+  // 可选类型
+  age?: number;
+  // 任意类型
+  [propName: string]: any;
+}
+
+let tom: Person = {
+  name: 'Tom',
+  gender: 'male'
+};
+
+let tom2: Person = {
+  name: 'Tom'
+  // 任意类型也可以不定义，类似可选类型
+};
+
+```
+
+```typescript
+interface Person {
+  name: string;
+  age?: number;  // 类型“number”的属性“age”不能赋给“string”索引类型“string”。ts(2411)
+  [propName: string]: string;
+}
+
+let tom: Person = {
+  name: 'Tom',
+  age: 25,
+  gender: 'male'
+};
+
+// index.ts(3,5): error TS2411: Property 'age' of type 'number' is not assignable to string index type 'string'.
+// index.ts(7,5): error TS2322: Type '{ [x: string]: string | number; name: string; age: number; gender: string; }' is not assignable to type 'Person'.
+//   Index signatures are incompatible.
+//     Type 'string | number' is not assignable to type 'string'.
+//       Type 'number' is not assignable to type 'string'.
+
+
+// 规定可选类型和必选类型必须是任意类型的子集
+// 任意类型的属性是string，但是可选属性的类型是number，number不是string的子属性，所以报错
+
+```
+
+```typescript
+interface Person {
+  name: string;
+  age?: number; // 这里真实的类型应该为：number | undefined,undefined是原始类型的子类型
+  [propName: string]: string | number | undefined;
+}
+
+let tom: Person = {
+  name: 'Tom',
+  age: 25,
+  gender: 'male'
+};
+
+```
+
+### 3. 鸭子辨型法
+
+```typescript
+interface labeledObj {
+  key:string
+}
+
+let a:labeledObj = {
+  key: 'key',
+  value: 1
+}
+
+// 不能将类型“{ key: string; value: number; }”分配给类型“labeledObj”。
+// 对象文字可以只指定已知属性，并且“value”不在类型“labeledObj”中。ts(2322)
+
+
+// 总结：我们定义的变量的内容必须严格按照接口类型
+
+```
+
++ 那么鸭子类型是怎么回事？
+
+``` typescript
+interface labeledObj {
+  key:string
+}
+
+let sen = {
+  key:'sen',
+  value: 1
+}
+
+let a:labeledObj = sen
+
+// a属于labeledobj，所以虽然赋值sen上有value，但是不能使用
+a.value = 2
+
+console.log(a)
+
+// 不难发现我们sen的类型为{key: string; value: number }、
+// 并将该类型赋值给了类型为labeledObj的a
+// 显然sen的内容是不符labeledObj的接口类型要求的，但是赋值给a的时候，a要求只要有内容{key:string}，但是你给我的变量sen给的更多，所以来者不拒。我的变量a在使用的时候，任然按照labeledobj的要求。这就是鸭子类型
+
+```
+
+```typescript
+interface LabeledValue {
+  label: string;
+}
+function printLabel(labeledObj: LabeledValue) {
+  console.log(labeledObj.label);
+}
+let myObj = { size: 10, label: "Size 10 Object" };
+
+
+printLabel(myObj); // OK
+
+
+printLabel({ size: 10, label: "Size 10 Object" }); // Error
+
+```
+
++ 定义的`myObj`显然不符合我们接口`LabeledValue`，但是当你作为参数传入`labeledObj`的时候，比我需要的内容要多，而我使用仍然按照`LabelValue`进行使用，你给我的传入的参数，能用，且绝不会报错，那就用着呗。看着像鸭子就是鸭子。
+
+### 4. 鸭子辨型法
+
++ 被赋值的变量能够实现这个接口，就认为他是鸭子。
+
+```typescript
+interface LabeledValue {
+  label: string;
+}
+
+function printLabel(labelObj: LabeledValue) {
+  console.log(labelObj.label);
+}
+
+let myObj = { size: 10, label: "Size 10 Objec" };
+printLabel(myObj) // Ok
+
+
+// 对比
+interface LabeledValue {
+  label: string;
+}
+function printLabel(labeledObj: LabeledValue) {
+  console.log(labeledObj.label);
+}
+printLabel({ size: 10, label: "Size 10 Object" }); // Error
+
+// 上面之所以报错是因为再传入的参数写对象，相当于直接赋值，此时有严格的类型定义，所以不能多参少参。
+// 那么为什么第一个不报错？
+// 因为你在外面将该参数对象，用另一个变量myObj接受，而myObj不能经过额外属性检查，但会根据类型推断为
+// let myObj: {szie:number, label:string} = {size:10,label:'Size 10 Object'}
+// 然后将这个myObj再赋值给labelObj,此时根据类型的兼容性，两种类型对象，参照[鸭式辨型法]，因为具有label属性，所以认丁为两个相同，孤儿可以用此法绕开多余的类型检查。
+
+```
+
+### 5. 绕开额外类型检查的方式
+
++ 鸭子辨型法
++ 类型断言
+  + 类型断言的意义就等同于你在告诉程序，你很清楚自己在做什么，此时程序自然就不会再进行额外的属性检查了。
+
++ 索引签名
+
+```typescript
+// 类型断言
+interface Props { 
+  name: string; 
+  age: number; 
+  money?: number;
+}
+
+let p: Props = {
+  name: "兔神",
+  age: 25,
+  money: -100000,
+  girl: false
+} as Props; // OK
+
+```
+
+```typescript
+// 索引签名
+interface Props { 
+  name: string; 
+  age: number; 
+  money?: number;
+  [key: string]: any;
+}
+
+let p: Props = {
+  name: "兔神",
+  age: 25,
+  money: -100000,
+  girl: false
+}; // OK
+
+```
+
+## 24. 接口与类型别名的区别
+
++ 在大多数的情况下使用接口类型和类型别名的效果等价，但是在某些特定的场景下这两者还是存在很大区别。
++ TypeScript 的核心原则之一是对值所具有的结构进行类型检查。 而接口的作用就是为这些类型命名和为你的代码或第三方代码定义数据模型。
++ type(类型别名)会给一个类型起个新名字。 type 有时和 interface 很像，但是可以作用于原始值（基本类型），联合类型，元组以及其它任何你需要手写的类型。起别名不会新建一个类型 - 它创建了一个新 名字来引用那个类型。给基本类型起别名通常没什么用，尽管可以做为文档的一种形式使用。
+
+### 1. Objects/Functions
+
++ 接口与类型别名两者可以用来描述对象或函数的类型，但是语法不同
+
++ interface
+
+```typescript
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface SetPoint {
+  (x: number, y: number): void;
+}
+
+```
+
++ Type alias
+
+```typescript
+type Point = {
+  x: number;
+  y: number;
+};
+
+type SetPoint = (x: number, y: number) => void;
+
+```
+
+### 2. Other Types
+
+```typescript
+// primitive 原始
+type Name = string;
+
+// object
+type PartialPointX = { x: number; };
+type PartialPointY = { y: number; };
+
+// union
+type PartialPoint = PartialPointX | PartialPointY;
+
+// tuple
+type Data = [number, string];
+
+// dom
+let div = document.createElement('div');
+type B = typeof div;
+
+```
+
+### 3. 接口可以定义多次，类型别名不可以
+
++ 与类型别名不同，接口可以定义多次，会被自动合并为单个接口。
+
+```typescript
+interface Point { x: number; }
+interface Point { y: number; }
+const point: Point = { x: 1, y: 2 };
+
+```
+
+### 4. 扩展
+
++ 两者的扩展方式不同，但并不互斥。接口可以扩展类型别名，同理，类型别名也可以扩展接口。
++ 接口的扩展就是继承，通过 `extends` 来实现。类型别名的扩展就是交叉类型，通过 `&` 来实现。
+
+```typescript
+// 接口扩展接口
+interface PointX {
+    x: number
+}
+
+interface Point extends PointX {
+    y: number
+}
+
+```
+
+```typescript
+// 类型别名扩展类型别名
+type PointX = {
+    x: number
+}
+
+type Point = PointX & {
+    y: number
+}
+
+```
+
+```typescript
+// 接口扩展类型别名
+type PointX = {
+  x: number
+}
+interface Point extends PointX {
+  y: number
+}
+
+```
+
+```typescript
+// 类型别名扩展接口
+interface PointX {
+    x: number
+}
+type Point = PointX & {
+    y: number
+}
+
+```
+
+## 25. 泛型
+
++ 泛型是一个抽象类型，只有在调用的时候才确定它的值。
+
+```typescript
+// 实现传入一个类型，返回相同的类型
+function identity<T>(arg: T): T {
+    return arg;
+}
+
+```
+
++ `T`代表`<Type>`,在定义泛型时通常用作第一个类型变量名称。但实际上`T`可以用任何有效名称代替。除了`T`之外，一下是常见有效名称替代：
+  + K（key）
+  + V（Value）
+  + E（Element）
+
+![image-20220519160216902](typeScript笔记.assets/image-20220519160216902.png)
+
+![image-20220519160306843](typeScript笔记.assets/image-20220519160306843.png)
+
+```typescript
+function identity <T, U>(value: T, message: U) : T {
+  console.log(message);
+  return value;
+}
+console.log(identity<Number, string>(68, "Semlinker"));
+
+
+// ts会帮助我们自动选择类型，所以可以变化为
+function identity <T, U>(value: T, message: U) : T {
+  console.log(message);
+  return value;
+}
+console.log(identity(68, "Semlinker"));
+
+```
+
+### 1. 泛型约束
+
+```typescript
+function trace<T>(arg: T): T {
+  console.log(arg.size); // Error: Property 'size doesn't exist on type 'T'
+  return arg;
+}
+
+// 报错的原因是因为T理论上可以是任何类型。不同于any，你在不管使用它的什么属性或者方法都会报错（除非这个属性和方法是所有集合共有的）。
+// 那么我们像实现这个具有size的功能，就需要进行类型约束
+// 使用extend，让T实现这个接口即可
+interface Sizeable {
+  size: number;
+}
+function trace<T extends Sizeable>(arg: T): T {
+  console.log(arg.size);
+  return arg;
+}
+
+```
+
+## 26. 泛型工具类型
+
+### 1. typeof
+
++ typeof 的主要用途是在类型上下文中获取变量或者属性的类型，下面我们通过一个具体示例来理解一下。
+
+```typescript
+
+interface Person {
+  name: string;
+  age: number;
+}
+const sem: Person = { name: "semlinker", age: 30 };
+type Sem = typeof sem; // type Sem = Person
+
+const lolo: Sem = { name: "lolo", age: 5 }
+
+```
+
+```typescript
+const Message = {
+  name: "jimmy",
+  age: 18,
+  address: {
+    province: '四川',
+    city: '成都'   
+  }
+}
+type message = typeof Message;
+/*
+type message = {
+  name: string;
+  age: number;
+  address: {
+      province: string;
+      city: string;
+  };
+}
+*/
+
+```
+
++ `typeof` 操作符除了可以获取对象的结构类型之外，它也可以用来获取函数对象的类型
+
+```typescript
+function toArray(x: number): Array<number> {
+  return [x];
+}
+type Func = typeof toArray; // -> (x: number) => number[]
+
+```
+
+### 2. keyof
+
++ `keyof`用于获取某种类型的所有键，其返回类型是联合类型。
+
+```typescript
+interface Person {
+  name: string;
+  age: number;
+}
+
+type K1 = keyof Person; // "name" | "age"
+type K2 = keyof Person[]; // "length" | "toString" | "pop" | "push" | "concat" | "join" 
+type K3 = keyof { [x: string]: Person };  // string | number
+
+```
+
+```typescript
+// K3分析
+// 正常情况下
+let a:string = 'sen'
+let b:number = 1
+a = b //不能将类型“number”分配给类型“string”。 
+
+// 但是在对象中，key值最终会转化成字符串，所以key为number也可以使用
+interface Person {
+  [x:string]: string
+}
+
+let person:Person = {
+  1:'sen'
+}
+
+// 所以最终获取K3的类型为string | number
+// 为了同时支持两种索引类型，就得要求数字索引的返回值必须是字符串索引返回值的子类。其中的原因就是当使用数值索引时，JavaScript 在执行索引操作时，会先把数值索引先转换为字符串索引。所以 keyof { [x: string]: Person } 的结果会返回 string | number。
+
+
+interface StringArray {
+  // 字符串索引 -> keyof StringArray => string | number
+  [index: string]: string; 
+}
+
+interface StringArray1 {
+  // 数字索引 -> keyof StringArray1 => number
+  [index: number]: string;
+}
+
+```
+
++ keyof也支持基本数据类型
+
+```typescript
+let K1: keyof boolean; // let K1: "valueOf"
+let K2: keyof number; // let K2: "toString" | "toFixed" | "toExponential" | ...
+let K3: keyof symbol; // let K1: "valueOf"
+
+```
+
++ keyof的作用
+
+```typescript
+// 获取对象键的值，js代码
+function prop(obj, key) {
+    return obj[key]
+}
+
+// ts代码
+function prop(obj:object, key:string) {
+    return obj[key]
+}
+// 运行时，报错：
+// Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{}'.
+// 元素隐式地拥有 any 类型，因为 string 类型不能被用于索引 {} 类型。
+// TS无法保证key的属于obj里面的，所以obj无法推断具体的类型，即具体接口的模样，所以报错被认为是any
+
+// 修改
+function prop<T extends object, K extends keyof T>(obj: T, key: K) {
+  return obj[key];
+}
+// 首先定义了 T 类型并使用 extends 关键字约束该类型必须是 object 类型的子类型，然后使用 keyof 操作符获取 T 类型的所有键，其返回类型是联合类型，最后利用 extends 关键字约束 K 类型必须为 keyof T 联合类型的子类型。
+
+```
+
+### 3. in
+
++ in用来遍历枚举类型
+
+```typescript
+type Keys = "a" | "b" | "c"
+
+type Obj =  {
+  [p in Keys]: any
+} // -> { a: any, b: any, c: any }
+
+```
+
+### 4. infer
+
++ 声明一个变量并且对他进行使用
+
+
+
+
+
+### 5. extends
+
++ extends继承类
+
+```typescript
+interface Lengthwise {
+  length: number;
+}
+
+function loggingIdentity<T extends Lengthwise>(arg: T): T {
+  console.log(arg.length);
+  return arg;
+}
+
+```
+
+### 6. 索引类型
+
+```typescript
+let person = {
+    name: 'musion',
+    age: 35
+}
+
+// 通过key获取对象对应得值
+function getValues(person: any, keys: string[]) {
+    return keys.map(key => person[key])
+}
+
+console.log(getValues(person, ['name', 'age'])) // ['musion', 35]
+console.log(getValues(person, ['gender'])) // [undefined]
+
+// 不难发现，类型约束存在key不属于person的情况。
+
+```
+
+```typescript
+// 优化
+// T[K][]可以拆分理解
+// T[K] -> 获取对应的值value
+// value[] 表示该数组内容为value
+function getValues<T, K extends keyof T>(person: T, keys: K[]): T[K][] {
+  return keys.map(key => person[key]);
+}
+
+interface Person {
+    name: string;
+    age: number;
+}
+
+const person: Person = {
+    name: 'musion',
+    age: 35
+}
+
+getValues(person, ['name']) // ['musion']
+getValues(person, ['gender']) // 报错：
+// Argument of Type '"gender"[]' is not assignable to parameter of type '("name" | "age")[]'.
+// Type "gender" is not assignable to type "name" | "age".
 
 
 ```
@@ -521,23 +1451,86 @@ getComponent(vec, x); // Error
 
 
 
+## 27. tsconfig.json
+
+### 1. 重要字段
+
+- `files` - 设置要编译的文件的名称；
+- `include` - 设置需要进行编译的文件，支持路径模式匹配；
+- `exclude` - 设置无需进行编译的文件，支持路径模式匹配；
+- `compilerOptions` - 设置与编译流程相关的选项。
+
+### 2. `compilerOptions`选项
+
+```js
+{
+  "compilerOptions": {
+  
+    /* 基本选项 */
+    "target": "es5",                       // 指定 ECMAScript 目标版本: 'ES3' (default), 'ES5', 'ES6'/'ES2015', 'ES2016', 'ES2017', or 'ESNEXT'
+    "module": "commonjs",                  // 指定使用模块: 'commonjs', 'amd', 'system', 'umd' or 'es2015'
+    "lib": [],                             // 指定要包含在编译中的库文件
+    "allowJs": true,                       // 允许编译 javascript 文件
+    "checkJs": true,                       // 报告 javascript 文件中的错误
+    "jsx": "preserve",                     // 指定 jsx 代码的生成: 'preserve', 'react-native', or 'react'
+    "declaration": true,                   // 生成相应的 '.d.ts' 文件
+    "sourceMap": true,                     // 生成相应的 '.map' 文件
+    "outFile": "./",                       // 将输出文件合并为一个文件
+    "outDir": "./",                        // 指定输出目录
+    "rootDir": "./",                       // 用来控制输出目录结构 --outDir.
+    "removeComments": true,                // 删除编译后的所有的注释
+    "noEmit": true,                        // 不生成输出文件
+    "importHelpers": true,                 // 从 tslib 导入辅助工具函数
+    "isolatedModules": true,               // 将每个文件做为单独的模块 （与 'ts.transpileModule' 类似）.
+
+    /* 严格的类型检查选项 */
+    "strict": true,                        // 启用所有严格类型检查选项
+    "noImplicitAny": true,                 // 在表达式和声明上有隐含的 any类型时报错
+    "strictNullChecks": true,              // 启用严格的 null 检查
+    "noImplicitThis": true,                // 当 this 表达式值为 any 类型的时候，生成一个错误
+    "alwaysStrict": true,                  // 以严格模式检查每个模块，并在每个文件里加入 'use strict'
+
+    /* 额外的检查 */
+    "noUnusedLocals": true,                // 有未使用的变量时，抛出错误
+    "noUnusedParameters": true,            // 有未使用的参数时，抛出错误
+    "noImplicitReturns": true,             // 并不是所有函数里的代码都有返回值时，抛出错误
+    "noFallthroughCasesInSwitch": true,    // 报告 switch 语句的 fallthrough 错误。（即，不允许 switch 的 case 语句贯穿）
+
+    /* 模块解析选项 */
+    "moduleResolution": "node",            // 选择模块解析策略： 'node' (Node.js) or 'classic' (TypeScript pre-1.6)
+    "baseUrl": "./",                       // 用于解析非相对模块名称的基目录
+    "paths": {},                           // 模块名到基于 baseUrl 的路径映射的列表
+    "rootDirs": [],                        // 根文件夹列表，其组合内容表示项目运行时的结构内容
+    "typeRoots": [],                       // 包含类型声明的文件列表
+    "types": [],                           // 需要包含的类型声明文件名列表
+    "allowSyntheticDefaultImports": true,  // 允许从没有设置默认导出的模块中默认导入。
+
+    /* Source Map Options */
+    "sourceRoot": "./",                    // 指定调试器应该找到 TypeScript 文件而不是源文件的位置
+    "mapRoot": "./",                       // 指定调试器应该找到映射文件而不是生成文件的位置
+    "inlineSourceMap": true,               // 生成单个 soucemaps 文件，而不是将 sourcemaps 生成不同的文件
+    "inlineSources": true,                 // 将代码与 sourcemaps 生成到一个文件中，要求同时设置了 --inlineSourceMap 或 --sourceMap 属性
+
+    /* 其他选项 */
+    "experimentalDecorators": true,        // 启用装饰器
+    "emitDecoratorMetadata": true          // 为装饰器提供元数据的支持
+  }
+}
 
 
+```
 
+### 3. 高效代码
 
++ 减少重复代码
+  + 使用extend或&
++ 使用更精确的类型替代字符串类型
 
+### 4. 练习
 
-
-
-
-
-
-
-
-
-
-
-## 20. 
+```typescript
+https://github.com/semlinker/awesome-typescript/issues
+```
 
 
 
