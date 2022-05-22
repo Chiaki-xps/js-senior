@@ -492,9 +492,29 @@ let anyFun = (param = null) => param // 形参 param:any
 
 ```
 
-案例分析
+案例分析：
 
 ```typescript
+// 定义一个获取对应坐标的函数
+interface Vector3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+function getComponent(vector: Vector3, axis: "x" | "y" | "z") {
+  return vector[axis];
+}
+
+// 使用该函数
+let x = "x";
+let vec = { x: 10, y: 20, z: 30 };
+// 因为使用x的定义使用let，推断为类型“string”， 所以参数不能赋给类型“"x" | "y" | "z"”的参数。
+getComponent(vec, x); // Error
+
+// 
+
+
 ```
 
 
