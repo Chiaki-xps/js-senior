@@ -1,5 +1,10 @@
 # typescript
 
+```typescript
+https://jkchao.github.io/typescript-book-chinese/#how-to-contribute
+// 还没读
+```
+
 ## 1. 开始
 
 ```npm
@@ -115,6 +120,79 @@ function push(array: any[], ...items: any[]) {
 }
 let a = []
 push(a, 1, 2 ,3)
+
+```
+
+```typescript
+interface A {
+  // foo是属性
+  foo ? : () => any
+}
+// 这两个是不等价的
+interface B {
+  // foo 是方法method
+  foo?()
+}
+
+let a:A = {
+  foo() {
+    
+  }
+}
+let b:B = {
+  foo() {
+    
+  }
+}
+
+// 注意问号表示前面的可选
+
+console.log(b,a)
+
+// 上面代码我么喜欢方法有确定的放回类型
+interface B {
+  // foo 是方法method
+  foo?():number
+}
+// 使用
+let b:B = {
+    foo() {
+        return 1
+    }
+}
+
+let b:B = {
+    foo():number {
+        return 1
+    }
+}
+
+```
+
+```typescript
+// 定义柯里化，或者函数返回函数然后最终返回确定的值
+interface A {
+    foo?:() => () => number
+}
+
+interface B {
+    foo?():() => number
+}
+
+// 使用
+let a:A = {
+    foo:() => () => 1
+}
+
+let b:B = {
+    foo:() => () => 1
+}
+
+let b:B = {
+  foo(){
+    return () => 1
+  }
+}
 
 ```
 
@@ -809,7 +887,6 @@ let tom: Person = {
 };
 
 // 约束了 tom 的形状必须和接口 Person 一致。
->>>>>>> 3eced4d130853a48b68d14640d76607519101be4
 ```
 
 ### 1. 可读 | 只读属性
@@ -1380,9 +1457,13 @@ type Obj =  {
 
 + 声明一个变量并且对他进行使用
 
+```typescript
+type ReturnType<T> = T extends (
+  ...args: any[]
+) => infer R ? R : any;
 
-
-
+// 以上代码中 infer R 就是声明一个变量来承载传入函数签名的返回值类型，简单说就是用它取到函数返回值的类型方便之后使用。
+```
 
 ### 5. extends
 
@@ -1444,6 +1525,232 @@ getValues(person, ['gender']) // 报错：
 // Argument of Type '"gender"[]' is not assignable to parameter of type '("name" | "age")[]'.
 // Type "gender" is not assignable to type "name" | "age".
 
+```
+
+```typescript
+T[K]表示对象T的属性K所表示的类型，在上述例子中，T[K][] 表示变量T取属性K的值的数组
+
+// 通过[]索引类型访问操作符, 我们就能得到某个索引的类型
+class Person {
+    name:string;
+    age:number;
+ }
+ type MyType = Person['name'];  //Person中name的类型为string type MyType = string
+
+// 介绍完概念之后，应该就可以理解上面的代码了。首先看泛型，这里有T和K两种类型，根据类型推断，第一个参数person就是person，类型会被推断为Person。而第二个数组参数的类型推断（K extends keyof T），keyof关键字可以获取T，也就是Person的所有属性名，即['name', 'age']。而extends关键字让泛型K继承了Person的所有属性名，即['name', 'age']。这三个特性组合保证了代码的动态性和准确性，也让代码提示变得更加丰富了
+
+```
+
+### 7. 映射类型
+
++ 根据旧的类型创建新的类型，我们称之为类型映射
+
+```typescript
+// 原有类型
+interface TestInterface{
+    name:string,
+    age:number
+}
+
+// 
+// 我们可以通过+/-来指定添加还是删除
+
+type OptionalTestInterface<T> = {
+  // 加上可选 +?
+  [p in keyof T]+?:T[p]
+}
+
+type newTestInterface = OptionalTestInterface<TestInterface>
+// type newTestInterface = {
+//    name?:string,
+//    age?:number
+// }
+
+
+type OptionalTestInterface<T> = {
+ // 加上只读+readonly
+ +readonly [p in keyof T]+?:T[p]
+}
+
+type newTestInterface = OptionalTestInterface<TestInterface>
+// type newTestInterface = {
+//   readonly name?:string,
+//   readonly age?:number
+// }
+
+```
+
+### 8. 内置的工具类型
+
++ `Partial<T>`将类型的属性变成可选
+
+```typescript
+// 内部的实现
+type Partial<T> = {
+  [P in keyof T]?: T[P];
+};
+
+// keyof T 拿到 T 的所有属性名，然后使用 in 进行遍历，将值赋给 P ，最后通过 T[P] 取得相应的属性值的类。中间的 ? 号。用于将所有属性变为可选。
+
+```
+
++ 通过上面的代码不难发现，我们的**`Partial`只支持第一层的属性处理。**
+
+```typescript
+interface UserInfo {
+  id: string;
+  name: string;
+  fruits: {
+      appleNumber: number;
+      orangeNumber: number;
+  }
+}
+
+type NewUserInfo = Partial<UserInfo>;
+
+// Property 'appleNumber' is missing in type '{ orangeNumber: number; }' but required in type '{ appleNumber: number; orangeNumber: number; }'.
+const xiaoming: NewUserInfo = {
+  name: 'xiaoming',
+  fruits: {
+      orangeNumber: 1,
+  }
+}
+
+// fruits内容任然是必选的
+
+```
+
++ 自己实现一个深度多层处理`DeepPartial`
+
+```typescript
+type DeepPartial<T> = {
+  // 如果是 object，则递归类型
+  [U in keyof T]?: T[U] extends object ? DeepPartial<T[U]> : T[U];
+};
+
+type PartialedWindow = DeepPartial<T>; // 现在T上所有属性都变成了可选啦
+
+// 拆分理解
+// key值         可选 	 三目运算
+([U in keyof T]) (?:) (T[U] extends object ? DeepPartial<T[U]> : T[U];)
+
+```
+
+### 9. Required
+
++ Required将类型的属性变成必选
+
+```typescript
+// 实现
+type Required<T> = { 
+    [P in keyof T]-?: T[P] 
+};
+
+// 其中 -? 是代表移除 ? 这个 modifier 的标识。再拓展一下，除了可以应用于 ? 这个 modifiers ，还有应用在 readonly ，比如 Readonly<T> 这个类型
+
+```
+
+### 10. readonly
+
++ `Readonly<T>`的作用是将某个类型所有属性变为只读属性，也就意味着这些属性不能被重新赋值。
+
+```typescript
+// 实现
+type Readonly<T> = {
+    readonly [p in keyof T]: T[p];
+}
+
+```
+
+### 11. Pick
+
++ Pick从某个类型中挑出一些属性，变成新的类型
+
+```typescript
+type Pick<T, K extends keyof T> = {
+    [P in K]: T[P];
+};
+
+```
+
+```typescript
+// 实例
+interface Todo {
+  title: string;
+  description: string;
+  completed: boolean;
+}
+
+type TodoPreview = Pick<Todo, "title" | "completed">; 
+// type TodoPreview = {
+//   title: string;
+//   completed: boolean;
+// }
+
+const todo: TodoPreview = {
+  title: "Clean room",
+  completed: false,
+};
+
+```
+
+### 12. Record
+
++ `Record< K extends keyof any, T> `作用将 K 中所有**属性的值**转化为 T 类型
+
+```typescript
+// 这里的any距离，对象中key可以是数字，Symbol，字符串，最终javaScript会转成字符串罢了。所以存在多种类型可能。所以设计的时候选择继承自any得到所有的可能性。
+type Record<K extends keyof any, T> = {
+    [P in K]: T;
+};
+
+```
+
+```typescript
+interface PageInfo {
+  title: string;
+}
+
+type Page = "home" | "about" | "contact";
+
+type temp = Record<Page, PageInfo>
+
+const x: temp = {
+  about: { title: "about" },
+  contact: { title: "contact" },
+  home: { title: "home" },
+};
+
+// temp等价于
+type temp = {
+    home: PageInfo;
+    about: PageInfo;
+    contact: PageInfo;
+}
+
+```
+
+### 13. ReturnType
+
++ 用来得到一个函数的返回类型
+
+```typescript
+type ReturnType<T extends (...args: any[]) => any> = T extends (
+  ...args: any[]
+) => infer R
+  ? R
+  : any;
+
+// 简化代码可读性
+type ReturnType<T extends (...args: any[]) => any> = T extends ( ...args: any[] ) => infer R ? R : any;
+
+// 分析
+type ReturnType
+// T 继承一个函数， 函数的格式：(...args: any[]) => any>
+(<T extends (...args: any[]) => any>)
+    = 
+
+T extends ( ...args: any[] ) => infer R ? R : any;
 
 ```
 
@@ -1451,7 +1758,15 @@ getValues(person, ['gender']) // 报错：
 
 
 
-## 27. tsconfig.json
+
+
+
+
+
+
+
+
+## 27. `tsconfig.json`
 
 ### 1. 重要字段
 
