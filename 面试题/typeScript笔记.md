@@ -1699,7 +1699,7 @@ const todo: TodoPreview = {
 + `Record< K extends keyof any, T> `作用将 K 中所有**属性的值**转化为 T 类型
 
 ```typescript
-// 这里的any距离，对象中key可以是数字，Symbol，字符串，最终javaScript会转成字符串罢了。所以存在多种类型可能。所以设计的时候选择继承自any得到所有的可能性。
+// 这里的any原因，对象中key可以是数字，Symbol，字符串，最终javaScript会转成字符串罢了。所以存在多种类型可能。所以设计的时候选择继承自any得到所有的可能性。
 type Record<K extends keyof any, T> = {
     [P in K]: T;
 };
@@ -1751,6 +1751,15 @@ type ReturnType
     = 
 
 T extends ( ...args: any[] ) => infer R ? R : any;
+
+```
+
+### 14. Exclude
+
++ `Exclude<T, U>`的作用是将某个类型中属于另一个的类型移除掉。
+
+```typescript
+type Exclude<T, U> = T extends U ? never : T;
 
 ```
 
@@ -1847,7 +1856,13 @@ T extends ( ...args: any[] ) => infer R ? R : any;
 https://github.com/semlinker/awesome-typescript/issues
 ```
 
+## 28. 残留的问题
 
+extends和？
+
+infer
+
+ReturnType
 
 
 
