@@ -287,7 +287,32 @@ console.log(info3)
   + 验证二：在页面内实现跳转，localStorage会保留，sessionStorage也会保留；
   + 验证三：在页面外实现跳转（打开新的网页），localStorage会保留，sessionStorage不会被保留；
 
+```html
+// index.html
+<body>
+  <!-- <button>登录</button> -->
+  <!-- <a href="./detail.html" target="_blank">详情</a> -->
+  <script src="./01_Storage的存放演练.js"></script>
+</body>
+```
 
+```js
+const loginBtn = document.querySelector("button")
+
+// 这里之所以写个按钮是因为我们重新加载网页的时候，会重新执行一次代码，所以存在重新存储sessionStorage
+loginBtn.onclick = function() {
+  localStorage.setItem("name", "localStorage")
+  sessionStorage.setItem("name", "sessionStorage")
+}
+
+```
+
+```html
+// detail.html
+<body>
+  <h2>detail page</h2>
+</body>
+```
 
 ### 2. Storage常见的方法和属性
 
@@ -302,6 +327,111 @@ console.log(info3)
     + 如果key存储，则更新其对应的值；
   + `Storage.removeItem()`：该方法接受一个key作为参数，并把该key从存储中删除；
   + `Storage.clear()`：该方法的作用是清空存储中的所有key；
+
+```js
+
+// 1.setItem
+localStorage.setItem("name", "coderwhy")
+localStorage.setItem("age", 18)
+
+// 2.length
+console.log(localStorage.length)
+for (let i = 0; i < localStorage.length; i++) {
+  const key = localStorage.key(i)
+  console.log(localStorage.getItem(key))
+}
+
+// 3.key方法
+console.log(localStorage.key(0))
+
+// 4.getItem(key)
+console.log(localStorage.getItem("age"))
+
+// 5.removeItem
+localStorage.removeItem("age")
+
+// 6.clear方法
+localStorage.clear()
+
+```
+
+### 3. 封装Storage
+
++ 在开发中，为了让我们对Storage使用更加方便，我们可以对其进行一些封装：
+
+```js
+class HYCache {
+  // isLocal用于区分localCache和sessionCache
+  constructor(isLocal = true) {
+    this.storage = isLocal ? localStorage: sessionStorage
+  }
+
+  setItem(key, value) {
+    // 判断是否有值
+    if (value) {
+      this.storage.setItem(key, JSON.stringify(value))
+    }
+  }
+
+  getItem(key) {
+    let value = this.storage.getItem(key)
+    if (value) {
+      value = JSON.parse(value)
+      return value
+    } 
+  }
+
+  removeItem(key) {
+    this.storage.removeItem(key)
+  }
+
+  clear() {
+    this.storage.clear()
+  }
+
+  key(index) {
+    return this.storage.key(index)
+  }
+
+  length() {
+    return this.storage.length
+  }
+}
+
+const localCache = new HYCache()
+const sessionCache = new HYCache(false)
+
+export {
+  localCache,
+  sessionCache
+}
+
+```
+
+## 7. 认识IndexedDB
+
++ 什么是IndexedDB呢？
+  + 我们能看到DB这个词，就说明它其实是一种数据库（Database），通常情况下在服务器端比较常见；
+  + 在实际的开发中，大量的数据都是存储在数据库的，客户端主要是请求这些数据并且展示；
+  + 有时候我们可能会存储一些简单的数据到本地（浏览器中），比如token、用户名、密码、用户信息等，比较少存储大量的数据；
+  + 那么如果确实有大量的数据需要存储，这个时候可以选择使用IndexedDB；
++ IndexedDB是一种底层的API，用于在客户端存储大量的结构化数据。
+  + 它是一种事务型数据库系统，是一种基于JavaScript面向对象数据库，有点类似于NoSQL（非关系型数据库）；
+  + IndexDB本身就是基于事务的，我们只需要指定数据库模式，打开与数据库的连接，然后检索和更新一系列事务即可；
+
+![image-20220615182039515](28-JSON-Storage-IndexedDB.assets/image-20220615182039515.png)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
