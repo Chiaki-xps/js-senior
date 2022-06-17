@@ -418,16 +418,186 @@ export {
 + IndexedDB是一种底层的API，用于在客户端存储大量的结构化数据。
   + 它是一种事务型数据库系统，是一种基于JavaScript面向对象数据库，有点类似于NoSQL（非关系型数据库）；
   + IndexDB本身就是基于事务的，我们只需要指定数据库模式，打开与数据库的连接，然后检索和更新一系列事务即可；
+    + 事务大概就是多个操作同时完成。
 
 ![image-20220615182039515](28-JSON-Storage-IndexedDB.assets/image-20220615182039515.png)
 
++ 区别于localstorage存储的value是字符串，而indexedDB的value保存的可以是对象。
++ 数据库检索的效率就是比storage的检索要快。
 
+### 1. IndexDB的连接数据库
 
++ 第一步：打开indexDB的某一个数据库；
 
+  + 通过indexDB.open(数据库名称, 数据库版本)方法；
+  + 如果数据库不存在，那么会创建这个数据；
+  + 如果数据库已经存在，那么会打开这个数据库；
 
+  ```js
+  // 1. 打开数据库
+  const dbRequest = indexedDB.open('why')
+  ```
 
++ 第二步：通过监听回调得到数据库连接结果；
 
+  + 数据库的open方法会得到一个IDBOpenDBRequest类型
+  + 我们可以通过下面的三个回调来确定结果：
+    + onerror：当数据库连接失败时；
+    + onsuccess：当数据库连接成功时回调；
+    + onupgradeneeded：当数据库的version发生变化并且高于之前版本时回调；
+      + 通常我们在这里会创建具体的存储对象：db.createObjectStore(存储对象名称, { keypath: 存储的主键})
+    + 我们可以通过onsuccess回调的event获取到db对象：event.target.result
 
+  ```js
+  const dbRequest = indexedDB.open('why')
+  
+  // 1. 请求成功
+  dbRequest.onsuccess = function(event) {
+      
+  }
+  
+  // 2. 
+  ```
+
+  
+
+### 2. IndexedDB的数据库操作
+
++ 我们对数据库的操作要通过事务对象来完成：
+  + 第一步：通过db获取对应存储的事务db.transaction(存储名称, 可写操作)；
+  + 第二步：通过事务获取对应的存储对象transaction.objectStore(存储名称)；
++ 接下来我们就可以进行增删改查操作了：
+  + 新增数据store.add
+  + 查询数据
+    + 方式一：store.get(key)
+    + 方式二：通过store.openCursor 拿到游标对象
+      + 在request.onsuccess中获取cursor：event.target.result
+      + 获取对应的key：cursor.key；
+      + 获取对应的value：cursor.value；
+      + 可以通过cursor.continue来继续执行；
+  + 修改数据cursor.update(value)
+  + 删除数据cursor.delete()
+
++ **没看indexedDB**
+
+```js
+// 打开数据(和数据库建立连接)
+const dbRequest = indexedDB.open("why", 3)
+dbRequest.onerror = function(err) {
+  console.log("打开数据库失败~")
+}
+let db = null
+dbRequest.onsuccess = function(event) {
+  db = event.target.result
+}
+// 第一次打开/或者版本发生升级
+dbRequest.onupgradeneeded = function(event) {
+  const db = event.target.result
+
+  console.log(db)
+
+  // 创建一些存储对象
+  db.createObjectStore("users", { keyPath: "id" })
+}
+
+class User {
+  constructor(id, name, age) {
+    this.id = id
+    this.name = name
+    this.age = age
+  }
+}
+
+const users = [
+  new User(100, "why", 18),
+  new User(101, "kobe", 40),
+  new User(102, "james", 30),
+]
+
+// 获取btns, 监听点击
+const btns = document.querySelectorAll("button")
+for (let i = 0; i < btns.length; i++) {
+  btns[i].onclick = function() {
+    const transaction = db.transaction("users", "readwrite")
+    console.log(transaction)
+    const store = transaction.objectStore("users")
+
+    switch(i) {
+      case 0:
+        console.log("点击了新增")
+        for (const user of users) {
+          const request = store.add(user)
+          request.onsuccess = function() {
+            console.log(`${user.name}插入成功`)
+          }
+        }
+        transaction.oncomplete = function() {
+          console.log("添加操作全部完成")
+        }
+        break
+      case 1:
+        console.log("点击了查询")
+
+        // 1.查询方式一(知道主键, 根据主键查询)
+        // const request = store.get(102)
+        // request.onsuccess = function(event) {
+        //   console.log(event.target.result)
+        // }
+
+        // 2.查询方式二:
+        const request = store.openCursor()
+        request.onsuccess = function(event) {
+          const cursor = event.target.result
+          if (cursor) {
+            if (cursor.key === 101) {
+              console.log(cursor.key, cursor.value)
+            } else {
+              cursor.continue()
+            }
+          } else {
+            console.log("查询完成")
+          }
+        }
+        break
+      case 2:
+        console.log("点击了删除")
+        const deleteRequest = store.openCursor()
+        deleteRequest.onsuccess = function(event) {
+          const cursor = event.target.result
+          if (cursor) {
+            if (cursor.key === 101) {
+              cursor.delete()
+            } else {
+              cursor.continue()
+            }
+          } else {
+            console.log("查询完成")
+          }
+        }
+        break
+      case 3:
+        console.log("点击了修改")
+        const updateRequest = store.openCursor()
+        updateRequest.onsuccess = function(event) {
+          const cursor = event.target.result
+          if (cursor) {
+            if (cursor.key === 101) {
+              const value = cursor.value;
+              value.name = "curry"
+              cursor.update(value)
+            } else {
+              cursor.continue()
+            }
+          } else {
+            console.log("查询完成")
+          }
+        }
+        break
+    }
+  }
+}
+
+```
 
 
 

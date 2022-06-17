@@ -229,6 +229,8 @@ npx webpack --version
 
 ## 11. npm发布自己的包
 
++ **没看**
+
 + 注册npm账号：
   + https://www.npmjs.com/
   + 选择sign up
