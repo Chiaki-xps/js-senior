@@ -84,6 +84,8 @@ app.listen(8000, () => {
 
 ### 2. 客户端设置cookie
 
++ 这个学的不仔细
+
 + js直接设置和获取cookie
   + cookie在我们的document里面
 
@@ -92,8 +94,8 @@ app.listen(8000, () => {
 // 但是我们可以获取我们js代码自己设置的cookie
 console.log(document.cookie)
 
-// 假如我们想要把cookie删除怎么办
-
+// 假如我们想要把cookie删除怎么办，注意我们的cookie必须在http-only为false情况下，客户端才能修改，为true的情况下你修改不了
+document.cookie="name=why;max-age=0"
 ```
 
 + 这个cookie会在会话关闭时被删除掉；
@@ -308,9 +310,121 @@ window.dispatchEvent(new Event("coderwhy"))
   + hostname: 主机地址(不带端口)；
   + port: 端口；
   + pathname: 路径；
-  + search: 查询字符串；
+  + search: 查询字符串；`?name=why&age=18`
+    + 在我们的URL中叫query，location中叫search
   + hash: 哈希值；
+    + URL中叫fragment
   + username：URL中的username（很多浏览器已经禁用）
   + password：URL中的password（很多浏览器已经禁用）；
 
   + origin：就是我们的协议加上主机地址就是我们的源
+
+## 10. Location对象常见的方法
+
++ 我们会发现location其实是URL的一个抽象实现：
+
+![image-20220620102149479](29-Cookie-BOM浏览器操作.assets/image-20220620102149479.png)
+
+```js
+console.log(window.location)
+
+// 当前的完整的url地址
+console.log(location.href)
+
+// 协议protocol
+console.log(location.protocol)
+
+// 几个方法
+// 打开新地址
+location.assign("http://www.baidu.com")
+// 跳新地址
+location.href = "http://www.baidu.com"
+
+// 替代原地址，就不能回退
+location.replace("http://www.baidu.com")
+// 重新加载网页，false会检查缓存，true直接强制
+location.reload(false)
+
+```
+
++ location有如下常用的方法：
+  + assign：赋值一个新的URL，并且跳转到该URL中；
+  + replace：打开一个新的URL，并且跳转到该URL中（不同的是不会在浏览记录中留下之前的记录）；
+  + reload：重新加载页面，可以传入一个Boolean类型；
+
+## 11. history对象常见属性和方法
+
++ history对象允许我们访问浏览器曾经的会话历史记录。
+  + 有两个属性：
+    + length：会话中的记录条数；
+    + state：当前保留的状态值；
++ 有五个方法：
+  + back()：返回上一页，等价于history.go(-1)；
+  + forward()：前进下一页，等价于history.go(1)；
+  + go()：加载历史中的某一页；go(-2)回退两个
+  + pushState()：打开一个指定的地址；内部不会刷新，只是改变url。
+  + replaceState()：打开一个新的地址，并且使用replace；
+
+![image-20220620102727912](29-Cookie-BOM浏览器操作.assets/image-20220620102727912.png)
+
+```js
+const jumpBtn = document.querySelector("#jump")
+
+jumpBtn.onclick = function() {
+  // location.href = "./demo.html"
+
+  // 跳转(不刷新网页)，第一个参数就是state，第二个参数name，一些浏览器不支持该功能，第三个就是要修改的路由
+  // 打印history.state的时候，就会打印pushSate传入的state对象
+  history.pushState({name: "coderwhy"}, "", "/detail")
+
+  
+  // history.replaceState({name: "coderwhy"}, "", "/detail")
+}
+
+```
+
+```html
+<button id="scroll">滚动一下</button>
+  <button id="hashchange">改变hash</button>
+
+  <button id="jump">跳转新页面</button>
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
