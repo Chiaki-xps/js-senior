@@ -163,37 +163,265 @@ foo() // undefined
 
 ![image-20220620110542334](30-DOM操作架构-浏览器事件.assets/image-20220620110542334.png)
 
-
+![image-20220621155432539](30-DOM操作架构-浏览器事件.assets/image-20220621155432539.png)
 
 ## 2. EventTarget
 
 + 因为继承自`EventTarget`，所以也可以使用EventTarget的方法：
 
+```js
+document.addEventListener("click", () => {
+  console.log("document被点击")
+})
 
+const divEl = document.querySelector("#box")
+const spanEl = document.querySelector(".content")
 
+divEl.addEventListener("click", () => {
+  console.log("div元素被点击")
+})
 
+spanEl.addEventListener("click", () => {
+  console.log("span元素被点击")
+})
+
+```
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <style>
+    #box {
+      width: 200px;
+      height: 200px;
+      background-color: red;
+    }
+
+    .content {
+      width: 100px;
+      height: 100px;
+      display: inline-block;
+      background-color: blue;
+    }
+  </style>
+</head>
+<body>
+  
+  <div id="box" class="abc why" age="18">
+    <span name="why" class="content">span元素</span>
+    <!-- 哈哈哈 -->
+    <strong></strong>
+    <a href="#"></a>
+  </div>
+  <div></div>
+
+  <h2 name="title">标题</h2>
+  <button>切换标题</button>
+
+  <script src="./XXXXX.js"></script>
+</body>
+</html>
+```
+
+![image-20220621160112721](30-DOM操作架构-浏览器事件.assets/image-20220621160112721.png)
 
 ## 3. Node节点
 
 + 所有的DOM节点类型都继承自Node接口。
   + https://developer.mozilla.org/zh-CN/docs/Web/API/Node
 + Node有几个非常重要的属性：
-  + `nodeName`：node节点的名称。
-  + `nodeType`：可以区分节点的类型。
+  + `nodeName`：node节点的名称。HTML不区分大小写。
+  + `nodeType`：可以区分节点的类型。直接查节点类型的常量。
   + `nodeValue`：node节点的值；
   + `childNodes`：所有的子节点；
 
+```js
+const divEl = document.querySelector("#box")
+const spanEl = document.querySelector(".content")
 
+// 常见的属性
+console.log(divEl.nodeName, spanEl.nodeName) // DIV SPAN
+console.log(divEl.nodeType, spanEl.nodeType) // 1 1
+console.log(divEl.nodeValue, spanEl.nodeValue)
+
+// childNodes
+const spanChildNodes = spanEl.childNodes
+const textNode = spanChildNodes[0]
+console.log(textNode.nodeValue)
+
+
+// 常见的方法
+const strongEl = document.createElement("strong")
+strongEl.textContent = "我是strong元素"
+divEl.appendChild(strongEl)
+
+// 注意事项: document对象有方法appendChild方法，但是浏览器限制了你直接使用
+document.body.appendChild(strongEl)
+
+```
+
+![image-20220621161413426](30-DOM操作架构-浏览器事件.assets/image-20220621161413426.png)
+
+![image-20220621161422853](30-DOM操作架构-浏览器事件.assets/image-20220621161422853.png)
 
 ## 4. Document
 
 + Document节点表示的整个载入的网页，我们来看一下常见的属性和方法：
 
+```js
+// 常见的属性
+console.log(document.body)
+console.log(document.title)
+document.title = "Hello World"
 
+console.log(document.head)
+console.log(document.children[0])
+
+console.log(window.location)
+console.log(document.location) // 浏览器认为URL也是document的一部分
+console.log(window.location === document.location)
+
+// 常见的方法
+// 创建元素
+const imageEl = document.createElement("img")
+const imageEl2 = new HTMLImageElement()
+
+// 获取元素
+const divEl1 = document.getElementById("box")
+const divEl2 = document.getElementsByTagName("div")
+const divEl3 = document.getElementsByName("title")
+const divEl4 = document.querySelector(".content") // 获取第一个
+const divEl5 = document.querySelectorAll(".content") // 获取全部
+
+```
+
+![image-20220621170315818](30-DOM操作架构-浏览器事件.assets/image-20220621170315818.png)
+
+![image-20220621170320949](30-DOM操作架构-浏览器事件.assets/image-20220621170320949.png)
 
 ## 5. Element
 
 + 我们平时创建的div、p、span等元素在DOM中表示为Element元素，我们来看一下常见的属性和方法：
+
+```js
+const divEl = document.querySelector("#box")
+
+
+// 常见的属性
+console.log(divEl.id)
+console.log(divEl.tagName)
+console.log(divEl.children)
+console.log(divEl.className)
+console.log(divEl.classList)
+console.log(divEl.clientWidth)
+console.log(divEl.clientHeight)
+console.log(divEl.offsetLeft)
+console.log(divEl.offsetTop)
+
+// 常见的方法
+const value = divEl.getAttribute("age")
+console.log(value)
+divEl.setAttribute("height", 1.88)
+
+```
+
+![image-20220621170301048](30-DOM操作架构-浏览器事件.assets/image-20220621170301048.png)
+
+## 6. 认识事件监听
+
++ 前面我们讲到了JavaScript脚本和浏览器之间交互时，浏览器给我们提供的BOM、DOM等一些对象模型。
+  + 事实上还有一种需要和浏览器经常交互的事情就是事件监听：
+  + 浏览器在某个时刻可能会发生一些事件，比如鼠标点击、移动、滚动、获取、失去焦点、输入内容等等一系列
+    的事件；
++ 我们需要以某种方式（代码）来对其进行响应，进行一些事件的处理；
+  + 在Web当中，事件在浏览器窗口中被触发，并且通过绑定到某些元素上或者浏览器窗口本身，那么我们就可以
+    给这些元素或者window窗口来绑定事件的处理程序，来对事件进行监听。
+    + 给这些元素或者window窗口来绑定事件的过程，就叫事件监听。
++ 如何进行事件监听呢？
+  + 事件监听方式一：在script中直接监听；
+  + 事件监听方式二：通过元素的on来监听事件；
+  + 事件监听方式三：通过EventTarget中的addEventListener来监听；
+
+```html
+// 在script中直接监听；
+// event.html
+
+.box {
+      width: 200px;
+      height: 200px;
+      background-color: red;
+    }
+
+// 1. 
+  <div class="box" onclick="console.log('div元素被点击')"></div>
+
+// 2. 
+  <div class="box" onclick="divClick()"></div>
+
+function divClick() {
+  console.log("div元素被点击2")
+}
+```
+
+```js
+// 通过元素的on来监听事件；
+const divEl = document.querySelector(".box")、
+
+// onclick属于element属性。定义属性后面的会覆盖前面的。
+divEl.onclick = function() {
+  console.log("div元素被点击3")
+}
+
+// 2. 通过EventTarget中的addEventListener来监听；
+
+// 有点可以添加多次监听事件，且不会覆盖，然后也不会覆盖属性
+divEl.addEventListener("click", () => {
+  console.log("div元素被点击4")
+})
+divEl.addEventListener("click", () => {
+  console.log("div元素被点击5")
+})
+divEl.addEventListener("click", () => {
+  console.log("div元素被点击6")
+})
+
+```
+
+## 7. 认识事件流的由来
+
++ 事实上对于事件有一个概念叫做事件流，为什么会产生事件流呢？
+  + 我们可以想到一个问题：当我们在浏览器上对着一个元素点击时，你点击的不仅仅是这个元素本身；
+  + 这是因为我们的HTML元素是存在父子元素叠加层级的；
+  + 比如一个span元素是放在div元素上的，div元素是放在body元素上的，body元素是放在html元素上的；
+
+```html
+```
+
+
+
+```js
+```
+
+
+
+## 8. 事件冒泡和事件捕获
+
++ 我们会发现默认情况下事件是从最内层的span向外依次传递的顺序，这个顺序我们称之为事件冒泡（Event
+  Bubble）。
+  + 事实上，还有另外一种监听事件流的方式就是从外层到内层（body -> span），这种称之为事件捕获（Event
+    Capture）；
+  + 为什么会产生两种不同的处理流呢？
+    + 这是因为早期浏览器开发时，不管是IE还是Netscape公司都发现了这个问题，但是他们采用了完全相反的事
+      件流来对事件进行了传递；
+    + IE采用了事件冒泡的方式，Netscape采用了事件捕获的方式；
++ 那么我们如何去监听事件捕获的过程呢？
+
+
 
 
 
