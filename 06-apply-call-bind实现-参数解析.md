@@ -19,7 +19,7 @@
 
 ## ES6剩余参数
 
-```
+```js
 // rest parameters
 function sum(...nums) {
     console.log(...nums) // 打印一个数组

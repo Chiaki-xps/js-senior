@@ -20,19 +20,22 @@ setTimeout(function() {
 
 
 // 2. 监听点击
-const boxDiv = documnet.querySelector('.box')
+const boxDiv = document.querySelector('.box')
 // 把函数传递给boxDiv的属性onClick中，作为box的属性
-boxDic.onoclick = function() {
-    console.log(this) // 这里打印的this就和我们内部怎么调用该函数有直接关系， 将元素对象给到<div class='box'></div>
+boxDic.onclick = function() {
+    console.log(this) // 打印结果是<div class='box'></div>
+  	// 相当于内部进行了隐私调用
+ 		// boxDiv.onClick()。所以打印结果是 <div class='box'></div>
+  
+  	// 从上面的setTimeout和onClick，想要知道this的指向就要知道内部对回调函数具体是怎么调用的。
+  	// 这里打印的this就和我们内部怎么调用该函数有直接关系， 将元素对象给到<div class='box'></div>
 }
 
-// 点击事件发生后，实际执行像这样
-boxDiv.onclick()
-// onclick属性之前被传入函数，之后执行，把boxDiv绑定上去。
+// 点击事件发生后，实际内部执行像这样boxDiv.onclick()。onclick属性之前被传入函数，之后执行，把boxDiv绑定上去（隐式绑定）。
 
-boxDiv.addEventListenter('click', function() { console.log(this) })
-boxDiv.addEventListenter('click', function() { console.log(this) })
-boxDiv.addEventListenter('click', function() { console.log(this) })
+boxDiv.addEventListener('click', function() { console.log(this) })
+boxDiv.addEventListener('click', function() { console.log(this) })
+boxDiv.addEventListener('click', function() { console.log(this) })
 
 
 // 3. 数组.forEach/map/filter/find , 她们传入两个参数，第一个是回调函数，第二个就是this的绑定，不传默认window
@@ -68,9 +71,10 @@ names.map(function() {
    obj.foo.call('abc')  // String {'abc'}
    obj.foo.apply('abc')  // String {'abc'}
    
-   // 2. bind隐式绑定
+   // 2. bind 隐式绑定的优先级？
    var bar = obj.foo.bind('cba')
    // 这里是因为bar拿到的是一个返回值，这时里面的执行obj.foo后再执行bind里面的this已经被修改了，不太能体现bind的优先级高的特性
+   // bind是返回一个新函数，所以不太能体现优先级。
    bar() // String {'cba'}
    
    // 3. 更明显的比较bind
@@ -152,7 +156,7 @@ bar()
 ```js
 var obj = {
     name: 'obj1',
-    foo: funtion() {
+    foo: function() {
     	console.log(this)
 	}
 }
@@ -164,8 +168,7 @@ var obj2 = {
 // obj2.bar = obj1.foo
 // obj2.bar()  // 隐式绑定 {name: 'obj2', bar: f}
 
-(obj2.bar = obj1.foo)()  // 独立函数调用 window  (obj2.bar = obj1.foo)返回了函数，然后执行，所以是一个独立函数调用。
-
+(obj2.bar = obj1.foo)()  // 独立函数调用 window  (obj2.bar = obj1.foo)返回了函数地址，然后对函数地址执行函数，相当于独立函数调用，所以是一个独立函数调用打印window。
 
 ```
 
@@ -184,7 +187,7 @@ function foo(el) {
 var obj = {
     id: 'awesome'
 }
-
+// 原因是把上面的代码和下面的代码浏览器看成一个整体导致的
 [1, 2, 3].forEach(foo,obj)
 
 // 第一个办法记得加分号
@@ -210,6 +213,8 @@ var obj = {
 var name = [1, 2, 3]
 
 name.forEach(foo,obj)
+
+// 这里重点是浏览器怎么判断代码片段
 ```
 
 报错原因
@@ -255,7 +260,8 @@ var bar = () => ({name: 'why', age: 18})
 
 ```js
 var foo = () => {
-    console.log(this)
+  // 和其他变量一样，假如函数内找不到this，就会去上层作用域找 
+  console.log(this)
 }
 
 // 不管你怎么调用函数，都不会绑定this。而是会根据外层作用域决定this
@@ -274,6 +280,7 @@ var obj = {
     var _that = this
     getData: function() {
         // 模拟发送网络请求，将结果放到上面data属性中
+      	// setTimeout对传入的普通函数是独立调用，所以回调函数的this会指向window 
         setTimeout(function() {
             var result = ["abc", "cba", "nba"]
             _this.data = result
@@ -287,10 +294,10 @@ obj.getData()
 var obj = {
     data: [],
     getData: function() {
-        // 模拟发送网络请求，将结果放到上面data属性中
+        // 虽然setTimeout传入函数是独立调用，但是箭头函数不绑定this，上层作用域找到的是obj
         setTimeout(() => {
             var result = ["abc", "cba", "nba"]
-            // this会去上层作用域找，上层作用域是getData,而这个函数被下面的obj隐式调用。
+            // this会去上层作用域找，上层作用域是getData,而这个函数被下面的obj隐式调用，所以getData里的this是指向obj，所以箭头函数里的this指向obj。
             this.data = result
         }, 2000)
     }
@@ -315,7 +322,7 @@ var person = {
 function sayName() {
     var sss = person.sayName;
     sss(); // window  // 直接调用
-    person.sayName() // perosn 隐式调用
+    person.sayName() // person 隐式调用
     (person.sayName)() //person 隐式调用 这个括号加不加都一样
     (b = person.sayName)() // window 赋值表达式 间接函数引用
 }
@@ -439,146 +446,23 @@ var person2 = new Person('person2')
 
 person1.obj.foo1()() //window
 person1.obj.foo1.call(person2)() // window
-person1.obj.foo1().call(person2) // perosn2
+person1.obj.foo1().call(person2) // person2
 
 person1.obj.foo2()() // obj 往上层找，找到的就是obj ，因为foo2时是被obj调起的，而obj是被person1调起的。可以看出作用域是 person1{ obj{ foo2( this ) } }
 person1.obj.foo2.call(person2)() // person2
 person1.obj.foo2().call(person2) // obj
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## 7. 总结
+
++ setTimeout中是独立调用函数，所以指向window。
++ document内部的操作是隐性绑定。
++ 默认绑定优先级最低。
++ 显示优先级绑定高于隐式绑定
++ new绑定优先级高于隐式绑定和显示绑定
++ 显示绑定传入null/undefined，会默认为window
++ 箭头函数不绑定this。根据上层作用域找this
+
+new绑定 > 显示绑定（apply/call/bind） > 隐式绑定(obj.foo) > 默认绑定（独立函数调用）
 
 
