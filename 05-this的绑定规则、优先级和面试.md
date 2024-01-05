@@ -264,7 +264,7 @@ var foo = () => {
   console.log(this)
 }
 
-// 不管你怎么调用函数，都不会绑定this。而是会根据外层作用域决定this
+// 不管你怎么调用函数，都不会绑定this。而是会根据外层作用域决定this。所以call，bind对箭头函数没用。 
 foo()				// window
 foo.call('abc')		// window
 
@@ -280,7 +280,8 @@ var obj = {
     var _that = this
     getData: function() {
         // 模拟发送网络请求，将结果放到上面data属性中
-      	// setTimeout对传入的普通函数是独立调用，所以回调函数的this会指向window 
+      	// setTimeout对传入的普通函数是独立调用，所以回调函数的this会指向window
+      	// 当我们把setTimeout里的this改成_that（形成一个闭包），那么setTimeout里的变量_this会从作用域链找，找到他的值this，而这个this是在外面被隐式调用绑定的是obj
         setTimeout(function() {
             var result = ["abc", "cba", "nba"]
             _this.data = result
@@ -366,7 +367,7 @@ person1.foo3()() // window 独立函数调用
 person1.foo3.call(person2)() // window 独立函数调用 person1.foo3.call(person2)这一步的时候外层的函数绑定了person2,然后返回了一个新的函数，再执行，此时就是独立函数调用了
 person1.foo3().call(person2) // person2 返回函数之后进行了显示绑定
 
-person1.foo4()() // person1 箭头函数不绑定this，寻找上层作用域的时候时foo4，而foo4绑定的此时person1
+person1.foo4()() // person1 箭头函数不绑定this，寻找上层作用域的时候找到foo4（因为foo4是一个函数，因此会有一个函数作用域），而foo4绑定的此时person1
 person1.foo4.call(person2)()  // person2 因为再调用里面的箭头函数之前，上层作用域已经绑定了person2
 person1.foo4().call(person2) // person1
 ```
@@ -445,9 +446,10 @@ var person1 = new Person('person1')
 var person2 = new Person('person2')
 
 person1.obj.foo1()() //window
-person1.obj.foo1.call(person2)() // window
+person1.obj.foo1.call(person2)() // window 独立调用
 person1.obj.foo1().call(person2) // person2
 
+// 重点箭头函数往上层作用域找this。
 person1.obj.foo2()() // obj 往上层找，找到的就是obj ，因为foo2时是被obj调起的，而obj是被person1调起的。可以看出作用域是 person1{ obj{ foo2( this ) } }
 person1.obj.foo2.call(person2)() // person2
 person1.obj.foo2().call(person2) // obj
@@ -461,8 +463,8 @@ person1.obj.foo2().call(person2) // obj
 + 显示优先级绑定高于隐式绑定
 + new绑定优先级高于隐式绑定和显示绑定
 + 显示绑定传入null/undefined，会默认为window
-+ 箭头函数不绑定this。根据上层作用域找this
++ 箭头函数不绑定this。根据上层作用域找this。
+  + 作用域：全局作用域，函数作用域，块级作用域(for之类的)
 
 new绑定 > 显示绑定（apply/call/bind） > 隐式绑定(obj.foo) > 默认绑定（独立函数调用）
-
 
