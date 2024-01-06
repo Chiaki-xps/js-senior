@@ -455,7 +455,47 @@ person1.obj.foo2.call(person2)() // person2
 person1.obj.foo2().call(person2) // obj
 ```
 
-## 7. 总结
+## 7. 我自己的思考
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>按钮加一</title>
+</head>
+<body>
+  <h1>计数器</h1>
+  <button id="incrementBtn">加一</button>
+  <p id="counter">0</p>
+
+  <script>
+    // 这是一个闭包示例，setInterval里的函数用到的变量都会去作用域链条找
+
+    // 获取按钮和计数器元素
+    var incrementBtn = document.getElementById("incrementBtn");
+    var counter = document.getElementById("counter");
+
+    // 定义计数器变量
+    var count = 0;
+
+    // 添加按钮点击事件的处理程序
+    incrementBtn.addEventListener("click", function() {
+      // 每次点击计数器加一
+      count++;
+      // 更新计数器显示
+      counter.textContent = count;
+    });
+
+
+    setInterval(function foo () {
+      console.log(count);
+    }, 500);
+  </script>
+</body>
+</html>
+```
+
+## 8. 总结
 
 + setTimeout中是独立调用函数，所以指向window。
 + document内部的操作是隐性绑定。
