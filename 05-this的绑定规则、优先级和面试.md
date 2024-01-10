@@ -381,6 +381,8 @@ function Person (name) {
   this.foo1 = function () {
     console.log(this.name)
   },
+    
+  // 注意这里是有函数作用域的 this.foo2。当箭头函数向上找的时候，会找到这个函数作用域的this
   this.foo2 = () => console.log(this.name),
   this.foo3 = function () {
     return function () {
@@ -393,6 +395,7 @@ function Person (name) {
     }
   }
 }
+// 通过new方式创建的
 var person1 = new Person('person1')
 var person2 = new Person('person2')
 
