@@ -184,7 +184,7 @@ setTimeout(function() {
 
 ## 4. 总结
 
-+ **重点需要知道严格模式下。默认绑定下thsh会指向undefined。**
++ **重点需要知道严格模式下。默认绑定下this会指向undefined。**
 
 + **setTimeout下直接传入函数，this指向window。箭头函数则向上找。**
 
@@ -195,7 +195,7 @@ setTimeout(function() {
 + 对象是JavaScript中一个非常重要的概念，这是因为对象可以将多个相关联的数据封装到一起，更好的描述一个事物：
 + 用对象来描述事物，更有利于我们将现实的事物，抽离成代码中某个数据结构：
   + 所以有一些编程语言就是纯面向对象的编程语言，比Java；
-  + 你在实现任何现实抽象时都需要先创建一个类，根据类再去创建对象；
+  + 你在实现任何现实抽象时都需要先创建一个类，根据类再去创建对象；（先描述，再创建具体的实例）
 
 ## 2. JavaScript的面向对象
 
@@ -402,7 +402,7 @@ console.log(Object.keys(obj))
 ##### 1. 存储属性描述符测试代码
 
 ```js
-// 存取属性描述符还是数据描述符引擎会自己判断，意味着get、set属性不能和value属性共存，
+// 存取属性描述符还是数据描述符引擎会自己判断，意味着get、set属性不能和value，Writable属性共存，简单得说，存储属性描述和数据描述只能选择其中一个
 
 var obj = {
   name: "why",
@@ -629,7 +629,7 @@ var p3 = createPerson("王五", 30, 1.78, "北京市")
 // 工厂模式的缺点(获取不到对象最真实的类型)
 console.log(p1, p2, p3)
 
-// 我们创建的p1具体类型应该是Person类型，但是工厂模式下打印的就是Object类型。获取类型的时候类型结果过于宽泛，不好。
+// 我们创建的p1具体类型应该是Person类型，但是工厂模式下打印的就是Object类型，但不能知道具体是什么类，只知道是Object类型，但无法知道是Person类。获取类型的时候类型结果过于宽泛，不好。
 
 // 工厂模式能够代码重复的问题，但是解决不了获取更具体的类型
 ```
@@ -687,6 +687,10 @@ console.log(f1) // 默认创建空对象，执行完成后默认返回对象。
 ```js
  // 规范: 构造函数的首字母一般是大写
 function Person(name, age, height, address) {
+  // 当被new的时候内部会创建一个新对象
+  // 然后新对象赋值给this，this = 新对象
+	// 默认把这个this返回出去
+  
   this.name = name
   this.age = age
   this.height = height
@@ -713,6 +717,30 @@ p2.eating()
 ```
 
 ```js
+function Person(name) {
+  return 'aaa';
+}
+
+const xps = new Person();
+
+console.log(xps); // 结果Person {}
+
+function OtherPerson() {
+  return {
+    age: 18,
+  };
+}
+const newXps = new OtherPerson();
+console.log(newXps); //{ age: 18 }
+
+// 测试之后发现，如何函数返回值是对象，用返回的对象，如果没有，就return this。
+```
+
+## 8. 认识对象的原型
+
+```js
+// 构造函数创建对象的缺点
+
 function foo() {
   function bar() {
 
@@ -723,12 +751,21 @@ function foo() {
 var fn1 = foo() // 每次返回新的对象
 var fn2 = foo()
 
-console.log(fn1 === fn2)
+console.log(fn1 === fn2) // false
 
+// 同样的，每次我们new一个构造函数，我们也会返回不同的对象
+function Person() {
+  this.eating = function() {}
+}
 
+var p1 = new Person()
+var p2 = new Person()
+
+p1.eating === p2.eating
+// 每次new构造函数的过程中，方法也会重新创建，意味着多少次new，就会重复保存eating。这其实是对性能内存的浪费，因此有了对象的原型。
 ```
 
-## 8. 认识对象的原型
+**对象的原型可以解决构造函数创建过程中的内存浪费**
 
 + JavaScript当中每个对象都有一个特殊的内置属性 [[prototype]]，这个特殊的对象可以指向另外一个对象。
 + 那么这个对象有什么用呢？
@@ -746,6 +783,7 @@ console.log(fn1 === fn2)
 
 ```JS
 // 我们每个对象中都有一个 [[prototype]], 这个属性可以称之为对象的原型(隐式原型)
+// [[prototype]]是一个ECMA的标准，用两个中括号包裹的一个属性，但是并不代表一定要叫这个名称
 
 var obj = { name: "why" } // [[prototype]]
 var info = {} // [[prototype]]
@@ -755,7 +793,7 @@ var info = {} // [[prototype]]
 
 // 给对象中提供了一个属性, 可以让我们查看一下这个原型对象(浏览器提供，node也实现了)
 // __proto__
-// console.log(obj.__proto__) // [Object: null prototype] {}  // [Object: null prototype]是因为浏览器使用了toString()方法导致的
+// console.log(obj.__proto__) // [Object: null prototype] {}  // [Object: null prototype]是因为浏览器使用了toString()方法导致的。后面{}表示了obj.__proto__的值
 // console.log(info.__proto__) // [Object: null prototype] {}
 
 // 定义obj的时候等价于
@@ -774,7 +812,15 @@ obj.__proto__.age = 18
 
 console.log(obj.age)
 
+// 一般我们把__proto__叫做隐式原型
 ```
+
+总结一下：
+
++ ECMA标准中每个对象都会有一个[[prototype]]，这是一个标准，浏览器和node实现这个标准，提供了`__proto__`。我们一般称之为隐式原型
++ 函数本身自带一个prototype，称之为函数的原型，同时函数又是一个对象，具备了`__proto__`
++ 事实上class语法糖的本质其实也是构造函数。
++ 每一个函数的prototype会指向一个对象，这个对象就叫做这个函数的原型对象，这个原型对象中ECMA要求必须有constructor属性
 
 ### 1. 函数的原型 prototype
 
@@ -800,6 +846,7 @@ console.log(foo.prototype)
 
 ```js
 function foo() {
+  // new的过程中自动实现this.__proto__  = foo.prototype，使得new出来的对象的__porto__指向函数foo的prototype 
 }
 
 // 函数也是一个对象
@@ -809,7 +856,6 @@ function foo() {
 // 函数它因为是一个函数, 所以它还会多出来一个显示原型属性: prototype，这是函数自带的属性。不同于__proto__浏览器提供的
 console.log(foo.prototype)
 
-// new的过程中自动实现this.__proto__  = foo.prototype，使得new出来的对象的__porto__指向函数foo的prototype 
 var f1 = new foo()
 var f2 = new foo()
 
@@ -856,7 +902,7 @@ function foo() {
 
 // 1.constructor属性
 // foo.prototype这个对象中有一个constructor属性
-console.log(foo.prototype)  // {}
+console.log(foo.prototype)  // {} // 直接打印对象是空的，这是因为里面的constructor属性枚举属性为空
 console.log(Object.getOwnPropertyDescriptors(foo.prototype))
 // 打印结果
 // {
@@ -907,7 +953,7 @@ function foo() {}
 
 
 // 如果添加属性很多
-// 3.直接修改整个prototype对象
+// 3.直接修改整个prototype对象（下面的图就是表达这里）
 
 // 内存里新增加一个对象，然后赋值给prototype。注意对象赋值，给的是引用。
 foo.prototype = {
@@ -934,6 +980,8 @@ Object.defineProperty(foo.prototype, "constructor", {
 ![4](08-with-eval-严格模式-面向对象一.assets/4.png)
 
 #### 2. 创建对象方案优化，原型和构造函数组合
+
+![image-20240302004647050](08-with-eval-严格模式-面向对象一.assets/image-20240302004647050.png)
 
 ```js
 function Person(name, age, height, address) {
