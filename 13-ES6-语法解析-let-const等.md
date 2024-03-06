@@ -9,23 +9,6 @@
   + 计算属性名：Computed Property Names
 
 ```js
-const a = {
-    b: () => {
-        console.log(this)
-    },
-    c() {
-        console.log(this)
-    }
-}
-
-a.b() // 箭头函数不绑定this，向上作用域查找
-a.c() // 隐式绑定
-
-// Window {0: Window, window: Window, self: Window, document: document, name: '', location: Location, …}
-// {b: ƒ, c: ƒ}
-```
-
-```js
 // {}就是对象的字面量
 var bar = {}
 
@@ -52,7 +35,9 @@ var obj = {
   bar() {
     console.log(this)
   },
-  // 和下面不同，箭头函数不绑定this，这种表示给baz绑定箭头函数
+  // 和下面不同，箭头函数不绑定this，这种表示给baz赋值箭头函数
+  // 调用的时候会在沿着作用域找，JS对象是没有作用域的，所以最后找到的是最完成，node中是{},浏览器是window
+  // 而上面的两种方式，相当于直接调用了函数。隐式绑定
   baz: () => {
     // 
     console.log(this)
@@ -68,6 +53,21 @@ obj.foo()
 
 // obj[name + 123] = "hahaha"
 console.log(obj)
+
+```
+
+```js
+const a = {
+    b: () => {
+        console.log(this)
+    },
+    c() {
+        console.log(this)
+    }
+}
+
+a.b() // 箭头函数不绑定this，向上作用域查找，这里node打印{}，浏览器[]
+a.c() // 隐式绑定 打印的是对象a的内容
 
 ```
 
@@ -197,12 +197,13 @@ console.log(foo)
 
 ## 4. let/const作用域提升
 
-+ n let、const和var的另一个重要区别是作用域提升：
++ let、const和var的另一个重要区别是作用域提升：
   + 我们知道var声明的变量是会进行作用域提升的；
   + 但是如果我们使用let声明的变量，在声明之前访问会报错；
+    + 总结一句话：var有作用域提升，let、const必须在实例化之后才能访问。
 
 ```js
-// var会进行作用域提升
+// var会进行作用域提升，因此代码打印写在定义之前就能够找到变量
 // console.log(foo)
 // var foo = "foo"
 
@@ -234,7 +235,7 @@ let foo = "foo"
 + 我们知道，在全局通过var来声明一个变量，事实上会在window上添加一个属性：
   + 但是let、const是不会给window上添加任何属性的。
 + 那么我们可能会想这个变量是保存在哪里呢？
-+ n 我们先回顾一下最新的ECMA标准中对执行上下文的描述
++ 我们先回顾一下最新的ECMA标准中对执行上下文的描述
   + 旧的
 
 
@@ -246,9 +247,22 @@ let foo = "foo"
 
 在新的ECMA规范下：执行js代码的时候会创建上下文，里面就会有VE，在v8引擎里，VE指向的就是一个对象`variables_`，类型是`VariableMap`。本质是由C++的HashMap数据结构实现（内部就是哈希表）。
 
+`VE`是一个标准，V8的具体实现就是`variables_`。
+
+代码中，变量、函数等都会加入到`variables_`。
+
 ![image-20220501173513720](13-ES6-语法解析-let-const等.assets/image_20220501210222.png)
 
 事实上window不属于V8实现的，而是交由包含V8引擎的浏览器实现的。所以variables和window肯定不是同一个
+
+按照最新的ECMA，为什么window还能打印到var定义的变量，主要为了兼容，历史遗留问题。这就是为什么使用var减少了。
+
+```js
+// var定义的全局变量会放入到window中
+var foo = 'foo';
+
+console.log(window.foo)
+```
 
 ## 7. 变量被保存到VariableMap中
 
@@ -256,20 +270,20 @@ let foo = "foo"
   + 但是标准有没有规定这个对象是window对象或者其他对象呢？
   + 其实并没有，那么JS引擎在解析的时候，其实会有自己的实现；
   + 比如v8中其实是通过VariableMap的一个hashmap来实现它们的存储的。
-  + 那么window对象呢？而window对象是早期的GO对象，在最新的实现中其实是浏览器添加的全局对象，并且一直保持了window和var之间值的相等性；
+  + 那么window对象呢？而window对象是早期的GO对象，在最新的实现中其实是浏览器添加的全局对象，并且一直保持了window和var之间值的相等性；（为了做兼容，所以window能够拿到var定义全局变量）
 
 ## 8. var的块作用域
 
 + 在ES6之前，JavaScript只会形成两个作用域：全局作用域和函数作用域。
 
 ```js
-// ES5
+// ES5的时候是没有块级作用域
 // 块代码(block code)
 {
   // 里面写代码表达式
 }
 
-// 声明对象字面量,和上面的大括号作用完全不一样
+// 声明对象字面量,和上面的大括号作用完全不一样，对象是没有作用域的
 var obj = {} 
 
 ```
@@ -284,11 +298,13 @@ var obj = {}
 // 在ES5中只有两个东西会形成作用域
 // 1.全局作用域
 // 2.函数作用域
+// 没有块级作用域
+
 // function foo() {
 //   var bar = "bar"
 // }
 
-// console.log(bar)
+// console.log(bar) // 访问不到函数里的
 ```
 
 ## 9. let/const的块级作用域
@@ -322,6 +338,7 @@ var p = new Person() // ReferenceError: foo is not defined
   function demo() {
     console.log("demo function")
   }
+  // class定义的类，在块级作用域里外面是访问不到的
   class Person {}
 }
 
@@ -358,34 +375,34 @@ switch (color) {
     let bar = "bar"
 }
 
+// 可以
 console.log(foo)
+// 不可以
 console.log(bar)
 
 ```
 
 ```js
 // for语句的代码也是块级作用域
+// 包括for中()定义的也是块级作用域
 for (var i = 0; i < 10; i++) {
-  // console.log("Hello World" + i)
+  var name = ’xps‘
 }
-
+//可以访问
 console.log(i)
+console.log(name)
 
 for (let i = 0; i < 10; i++) {
+  var name = ’xps‘
 }
-
+// 访问不到
 console.log(i)
-
-```
-
-```js
-for(let i = 0; i<1; i++) {}
-
-console.log(i)
-访问不到i
+console.log(name)
 ```
 
 ## 10. 块级作用域的应用
+
++ 点击按钮的时候，打印对应的按钮
 
 ```html
 <button>按钮1</button>
@@ -397,8 +414,8 @@ console.log(i)
 ```js
 const btns = document.getElementsByTagName('button')
 
-// var i ，导致i定义在全局，所以i++以后，i其实已经变成4了，且没有重新计算赋值的画，访问结果都是4
-// 因为var没有定义作用域，所以函数在被执行的时候找i的时候会一直向上找，直到在全局作用域下找到var i
+// var定义的i是全局的，意味着遍历一边注册onclick事件的时候，i最终变成了4.
+// 发生点击的时候，i先上层作用域找，找到的是全局的i，所以无论点击哪一个都会打印4
 for (var i = 0; i <btns.length; i++) {
     btns[i].onclick = function() {
         console.log("第"+ i + "个按钮被点击")
@@ -410,7 +427,7 @@ console.log(i) //4
 // 可以理解成，for执行完成后
 // var是没有块级作用域的
 var i
-
+// for遍历4遍
 {
     btns[0].onclick = function() {console.log("第"+ i + "个按钮被点击")}
 }
@@ -458,12 +475,14 @@ for (let i = 0; i <btns.length; i++) {
 }
 
 // 因为let可以形成块级作用域
+// for循环，出现4个块级作用域，每个块都定义了一个i
 {
  let i = 0 
  btns[0].onclick = function() {console.log("第"+ i + "个按钮被点击")}
 }
 
 {
+  // 拿到上一个的i，进行i++之后赋值给新定义的i，所以新的i是1
  let i = 1 
  btns[1].onclick = function() {console.log("第"+ i + "个按钮被点击")}
 }
@@ -474,11 +493,13 @@ console.log(i)
 
 ```
 
+上面的例子可以当作了解。
+
 ```js
 const names = ["abc", "cba", "nba"]
 
-// 不可以使用const
-// for (let i = 0; i < names.length; i++) {
+// 加入，我们把let改成const会报错
+// for (const i = 0; i < names.length; i++) {
 //   console.log(names[i])
 // }
 
@@ -506,6 +527,7 @@ for (const item of names) {
 
 // {
 //   这里可以是因为这是块级作用域，不会和下面的const item重复定义
+//	 每次都是定义一个新的item，定义新常量，没有对常量操作和重新赋值，所以const of可以用const
 //   const item = "abc"
 //   console.log(item)
 // }
@@ -529,6 +551,7 @@ for (const item of names) {
 var foo = "foo"
 
 if(true) {
+  	// 出现暂时性死区，这个块级作用域里有foo，但是还没有初始化，不能访问，所以报错
     console.log(foo) // ReferenceError: Cannot access 'foo' before initialization
     
     let foo = "bar"
