@@ -29,7 +29,7 @@ console.log(obj.prop); // 42
 
 + descriptor 属性描述符主要两种形式：
   + 数据描述符合存取描述符，数据描述符是一个具有值的属性，该值可以是可写/不可写的。例如上面就是.
-  + *存取描述符*是由 getter 函数和 setter 函数所描述的属性
+  + 存取描述符是由 getter 函数和 setter 函数所描述的属性
 
 + **`object,defineProperties()`**就是定义多个属性。
 
@@ -54,8 +54,8 @@ Object.defineProperty(obj, 'name', {
 
 })
 
-console.log(obj.name)
-obj.name = "Kobe"
+console.log(obj.name) // 获取值的时候触发get
+obj.name = "Kobe" // 重新赋值 触发set
 
 ```
 
@@ -64,6 +64,8 @@ const obj = {
   name: "why",
   age: 18
 }
+
+// Object.defineProperty对对象中指定的key进行get、set拦截
 
 // Object.defineProperty(obj, 'name', {
 //   get: function () {
@@ -76,12 +78,16 @@ const obj = {
 //   }
 // })
 
+
+
+// 假如我们要对所有的key进行监听的话，就需要遍历一遍，都执行一次Object.defineProperty
 Object.keys(obj).forEach(key => {
   let value = obj[key]
 
   Object.defineProperty(obj, key, {
     get: function() {
       console.log(`监听到obj对象的${key}属性被访问了`)
+      // 如果没有返回值，默认返回undefined
       return value
     },
     set: function(newValue) {
@@ -116,6 +122,19 @@ console.log(obj.height)
   + 即，如果我们希望监听一个对象的相关操作，那么我们可以先创建一个代理对象（Proxy对象）
   + 之后对该对象的所有操作，都是通过代理对象来完成，代理对象可以监听我们想要对原对象就那些哪些操作；
 + Proxy本身就是创建一个新的代理对象，然后我们访问代理对象，就可以重写它的捕获器，从而对捕获到对代理对象的操作。
++ 大白话：**通过修改代理对象去修改原对象**。这样的话，代理对象在修改原对象的时候，可以增加一些额外操作。
+
+```js
+const obj = {
+  name: '1',
+  age: 18,
+};
+
+const objProxy = new Proxy(obj, {});
+console.log(objProxy); // { name: '1', age: 18 }
+console.log(objProxy === obj); // false
+
+```
 
 ```js
 const obj = {
@@ -125,11 +144,13 @@ const obj = {
 
 // 两个参数：
 // 参数一：目标对象（对象，数组，函数，甚至是另一个代理）
-// 参数二：handler捕获器，也可以叫处理器对象。里面以函数作为属性，每个函数属性分别定义了操作。
+// 参数二：handler捕获器对象，也可以叫处理器对象。
+//       捕获器对象定义了各种捕获器方法(Trap)，这些方法在对应场景下会自动调用，具体实现需要我们去重写，
+// 			 例如重写get，在我们获取属性的值的时候，会自动调用捕获器get，执行我们重写的get方法。
 const objProxy = new Proxy(obj, {
     // 获取值时的捕获器
     // get被调用的时候会传入一些参数：
-    // target：代理的对象
+    // target：代理的对象 -> obj
     // key：操作的属性名
     // receiver: 
     get: function(target, key, receiver) {
@@ -214,7 +235,7 @@ objProxy.age = 30
 + **`handler.get()`** 方法用于拦截对象的读取属性操作。
 
 + **`handler.apply()`** 方法用于拦截函数的调用。
-  + 用于函数对象（函数本身是一个对象）
+  + 用于函数对象（函数本身是一个对象）。函数.apply() 调用。
 + **`handler.construct()`** 方法用于拦截 [`new`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/new) 操作符。
   + 用于函数对象（函数本身是一个对象）
 
@@ -226,7 +247,9 @@ const obj = {
   age: 18
 }
 
-// 直接定义obj的属性是一个数据属性描述符，但是使用Object.defineProperty对该属性操作则最终会变成一个访问属性描述符
+// 直接定义obj的属性是一个数据属性描述符，但是使用Object.defineProperty对该属性操作则最终会变成一个访问属性描述符,
+
+// 而Proxy并不修改描述符
 
 // 变成一个访问属性描述符
 // Object.defineProperty(obj, "name", {
@@ -263,9 +286,10 @@ const objProxy = new Proxy(obj, {
 
 
 // in操作符
+// 当我们使用in操作符查询是否存在属性的时候，会在代理对象中触发has捕获器
 // console.log("name" in objProxy)
 
-// delete操作
+// delete操作 -> deleteProperty
 delete objProxy.name
 
 // 对objProxy的操作会影响到obj
@@ -297,7 +321,7 @@ const fooProxy = new Proxy(foo, {
     return target.apply(thisArg, argArray)
   },
 
-  // newTarget用的少，一般new会创建一个新的对象，之后返回，但是也会存在我们自己return一个新对象的可能性。（该表达是否正确我忘了，复习new先）
+  // newTarget用的少，一般new会创建一个新的对象，之后返回，但是也会存在我们自己return一个新对象的可能性。（
   // 大部分时候target和newTarget应该是同一个
   construct: function(target, argArray, newTarget) {
     console.log("对foo函数进行了new调用")
@@ -305,7 +329,9 @@ const fooProxy = new Proxy(foo, {
   }
 })
 
+// 函数被apply调用
 fooProxy.apply({}, ["abc", "cba"])
+// new 代理函数
 new fooProxy("abc", "cba")
 
 ```
@@ -314,16 +340,13 @@ new fooProxy("abc", "cba")
 
 + Reflect也是ES6新增的一个API，它是一个**对象**，字面的意思是反射。
 
-  + 这是一个对象，不是一个类。所以`new Reflect` 是不行的
-
+  + **这是一个对象，不是一个类**。所以`new Reflect` 是不行的
 + **那么Reflect有什么用？**
-
   + 它主要提供了很多**拦截（操作） JavaScript 操作的方法**，有点像Object中操作对象的方法；这些方法与`Proxy`中的`handler`的方法相同。
   + `Reflect`不是一个函数对象，因此它是不可构造的（不能new）。`Object`是一个构造函数。
-
+  
   + 静态方法 **`Reflect.getPrototypeOf()`** 与 [`Object.getPrototypeOf()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/GetPrototypeOf) 方法几乎是一样的。都是返回指定对象的原型（即内部的 `[[Prototype]]` 属性的值）。
-  + 静态方法 **`Reflect.defineProperty()`** 基本等同于 [`Object.defineProperty()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty) 方法，唯一不同是返回 [`Boolean`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Boolean) 值。
-
+  + 静态方法 **`Reflect.defineProperty()`** 基本等同于 [`Object.defineProperty()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty) 方法，唯一不同是返回Boolean值。
 + **如果Object可以实现，为什么还需要Reflect?**
   +  这是因为在早期的ECMA规范中没有考虑到这种对 对象本身 的操作如何设计会更加规范，所以将这些API放到了Object上面；
   + 但是Object作为一个构造函数，这些操作实际上放到它身上并不合适；
@@ -331,13 +354,161 @@ new fooProxy("abc", "cba")
   + 所以在ES6中新增了Reflect，让我们这些看起来奇怪的操作符in delete操作都集中到了Reflect对象上；
   + 可以理解成对`Object`的一些功能的替代。
   + Proxy具有那些捕获器，我们的Reflect就具有那些方法。
+  + 大白话：**Reflect用来替代Object的方法，完善规范，将原来塞在Object的方法挪到了Reflect上**
 + 那么Object和Reflect对象之间的API关系，可以参考MDN文档：
 
 ```http
 https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Reflect/Comparing_Reflect_and_Object_methods
 ```
 
+## 7. Reflect常见的方法
+
++ Proxy上有哪些常见的方法，Reflect上就会有一一对应的方法
++ 这意味着，原来我们在Proxy上定义的捕获器，可以改用Reflect上的方法。
++ Reflect.getPrototypeOf(target)
+  + 类似于 Object.getPrototypeOf()。
++ Reflect.setPrototypeOf(target, prototype)
+  + 设置对象原型的函数. 返回一个 Boolean， 如果更新成功，则返 回true。
+
++ Reflect.isExtensible(target)
+  + 类似于 Object.isExtensible()
+
++ Reflect.preventExtensions(target)
+  + 类似于 Object.preventExtensions()。返回一个Boolean。
+
++ Reflect.getOwnPropertyDescriptor(target, propertyKey)
+  + 类似于 Object.getOwnPropertyDescriptor()。如果对象中存在该属性，则返回对应的属性描述符, 否则返回 undefined.
+
++ Reflect.defineProperty(target, propertyKey, attributes)
+  + 和 Object.defineProperty() 类似。如果设置成功就会返回 true
+
++ Reflect.ownKeys(target)
+  + 返回一个包含所有自身属性(不包含继承属性)的数组。(类似于Object.keys(), 但不会受enumerable影响). 
+
++ Reflect.has(target.propertyKey)
+  + 判断一个对象是否存在某个属性，和 in 运算符 的功能完全相同。
+
++ Reflect.get(target, propertyKey[, receiver])
+  + 获取对象身上某个属性的值，类似于 target[name]。 
+
++ Reflect.set(target, propertyKey, value[, receiver])
+  + 将值分配给属性的函数。返回一个Boolean，如果更新成功，则返回true。
+
++ Reflect.deleteProperty(target, propertyKey)
+  + 作为函数的delete操作符，相当于执行 delete target[name]。
+
++ Reflect.apply(target, thisArgument, argumentsList)
+  + 对一个函数进行调用操作，同时可以传入一个数组作为调用参数。和 Function.prototype.apply() 功能类似。
+
++ Reflect.construct(target, argumentsList[, newTarget])
+  + 对构造函数进行 new 操作，相当于执行 new target(...args)。
+
 ```js
+const obj = {
+  name: "why",
+  age: 18
+}
+
+const objProxy = new Proxy(obj, {
+  get: function(target, key, receiver) {
+    // return target[key]
+    return Reflect.get(target, key)
+  },
+  set: function(target, key, newValue, receiver) {
+    
+    // target[key] = newValue
+		// 一定场景下有一些区别，比如Reflect会返回一些结果，告诉我们是否成功
+    // 假如在外层出现Object.freeze(obj)冻结了obj，那么赋值失败返回flase，可以做其他操作
+    
+    const result = Reflect.set(target, key, newValue)
+    if (result) {
+      
+    } else {
+      
+    }
+  }
+})
+
+objProxy.name = "kobe"
+console.log(objProxy.name)
+
+
+// Reflect的意义在语言层面规范Object的操作
+// 直接操作target[key]性能可能还高点
 ```
 
+## 8. Receiver的作用
 
++ 如果我们的源对象(obj)有setter、getter的访问器属性，那么可以通过receiver来改变里面的this;
+
++ receiver本质上就是指向我们的objProxy。
+
+```js
+const obj = {
+  _name: "why",
+  get name() {
+    return this._name
+  },
+  set name(newValue) {
+    this._name = newValue
+  }
+}
+
+// obj中如果没有去修改get、set操作的this指向的话，例如
+// Reflect.get(target, key)。获取值的时候，触发obj中get的方法内部this指向obj。这就意味着存在obj直接被使用，我们希望obj中this也能够被代理的话，可以传入receiver。
+
+// receiver同时为了明确this的指向
+
+const objProxy = new Proxy(obj, {
+  get: function(target, key, receiver) {
+    // receiver是创建出来的代理对象
+    console.log("get方法被访问--------", key, receiver)
+    console.log(receiver === objProxy)
+    return Reflect.get(target, key, receiver)
+  },
+  set: function(target, key, newValue, receiver) {
+    console.log("set方法被访问--------", key)
+    Reflect.set(target, key, newValue, receiver)
+  }
+})
+
+console.log(objProxy.name) // 打印两次，一次是objProxy.name)，一次this.name
+objProxy.name = "kobe"
+
+```
+
+## 9. Reflect的construct
+
+```js
+function Student(name, age) {
+  this.name = name
+  this.age = age
+}
+
+function Teacher() {
+
+}
+
+// const stu = new Student("why", 18)
+// console.log(stu)
+// console.log(stu.__proto__ === Student.prototype)
+
+// 执行Student函数中的内容, 但是创建出来对象是Teacher对象
+// 参数一：需要new的构造函数
+// 参数二：传给构造函数的参数
+// 参数三：改变this。
+
+// this被指定为Teacher
+
+const teacher = Reflect.construct(Student, ["why", 18], Teacher)
+console.log(teacher)
+
+// 最终结果就是teacher.__proto__指向了Teacher.prototype
+console.log(teacher.__proto__ === Teacher.prototype)
+
+// 了解吧
+```
+
+## 10. 响应式函数设计
+
++ 响应式：当我们的变量发生变化的时候，使用到函数会重新执行。
