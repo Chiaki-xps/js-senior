@@ -22,9 +22,13 @@ function requestData(url) {
 
 const result = requestData("coderwhy")
 
-// 上面的代码不难发现，我们的异步请求，即使有返回值也不会传递到我们的result，它只是网络请求或者setTimeout的返回值，并不是requestData的返回值。
+// requestData是一个同步函数，你能拿到的返回值是undefined
 
-// 解决的办法就是传入回调函数，这个回调函数会将结果返回出去，这样子我们就能拿到。
+// 即使setTimeout，result也不会拿到的，requestData已经执行完毕了
+
+// 我们的异步请求，即使有返回值也不会传递到我们的result，它只是网络请求或者setTimeout的返回值，并不是requestData的返回值。
+
+// 解决的办法就是传入回调函数，当我们的setTimeout完成异步函数完成后，调用回调函数将结果返回出去，这样子我们就能拿到setTimeout执行结果。
 ```
 
 ```js
@@ -70,7 +74,7 @@ const chengnuo = requestData2()
 + 以前的网络异步请求，用的是callback来获取请求数据：
   + 这就需要我们自己来设计回调函数、回调函数的名称、回调函数的使用等；
   + 对于不同的人、不同的框架设计出来的方案是不同的，那么我们必须耐心去看别人的源码或者文档，以便可以理解它这个函数到底怎么用；对于使用callback的成本比较高。
-+ Promise是用于解决回调地狱，同时也形成了一个代码规范，就想承诺一样，规范好了所有代码别写逻辑，按照预设的方法去获取就行，而不需要增加增本去阅读一些请求函数的文档查看具体的回调。
++ Promise是用于解决回调地狱，同时也形成了一个代码规范，就像承诺一样，规范好了所有代码别写逻辑，按照预设的方法去获取就行，而不需要增加增本去阅读一些请求函数的文档查看具体的回调。
 
 ## 1. 什么是Promise呢？
 
@@ -84,7 +88,7 @@ const chengnuo = requestData2()
 
 ```js
 // new的过程会执行类里面的构造方法.
-// Promise传入回调函数，这个回调函数会被执行
+// Promise传入回调函数，这个回调函数会被执行，内部还会给回调函数传入一些默认参数resolve，reject
 // 传入的这个函数，被称之为executor
 const promise = new Promise((resolve，reject) => {
   console.log("promise传入的函数被执行")
@@ -93,17 +97,14 @@ const promise = new Promise((resolve，reject) => {
 // 等价于
 class Person {
   constructor(callback) {
-    let foo = function() {}
-    let bar = function() {}
+    const resolve = () => {}
+    const reject = () => {}
     // 相当于传入的回调函数，默认会帮助我们把resolve和reject两个函数传入进去
-    callback(foo, bar)
+    callback(resolve, reject)
   }
 }
 
-const p = new Person(() => {
-  foo()
-  bar()
-})
+const p = new Person(resolve，reject) => {})
 ```
 
 ```js
@@ -114,8 +115,6 @@ function foo() {
     // reject("failture message")
   })
 }
-
-// main.js
 
 // 这里获得一个promise
 const fooPromise = foo()
@@ -139,8 +138,9 @@ fooPromise.catch(() => {
 
 
 // 传入的这个函数, 被称之为 executor
-// > resolve: 回调函数, 在成功时, 回调resolve函数
-// >reject: 回调函数, 在失败时, 回调reject函数
+// > resolve: 回调函数, 在Promise中成功时, 回调resolve函数
+// > reject: 回调函数, 在Promise中失败时, 回调reject函数
+// Promise规范了成功失败的时候调用哪个函数。
 // const promise = new Promise((resolve, reject) => {
 //   // console.log("promise传入的函数被执行了")
 //   // resolve()
@@ -168,6 +168,23 @@ foo(() => {
 
 ```
 
+```js
+// 简易版本
+// 测试发现Promise中必须传入一个回调函数，不然报错
+const myPromise = new Promise((resolve, reject) => {
+ 	resolve(); 
+  // reject()
+})
+
+myPromise.then(...);
+myPromise.catch(...)
+
+//Promise作用作用就是规范了一种联系，
+// 当我们成功的时候如何通知出去，调用resolve，然后外部的then就可以被触发（resolve -> then），我么也就知道异步请求成功了，执行成功的操作。
+// catch也是同理。
+// 这就是Promise规范，建立resolve和外部的then的联系
+```
+
 现在我们利用Promise重构一下我们一开始利用网络请求回调的代码
 
 ```js
@@ -175,7 +192,8 @@ foo(() => {
 function requestData(url,) {
   // 异步请求的代码会被放入到executor中
   return new Promise((resolve, reject) => {
-    // new的过程中执行请求代码，
+    // new的过程中会执行回调函数的代码，
+    
     // 模拟网络请求
     setTimeout(() => {
       // 拿到请求的结果
@@ -202,7 +220,15 @@ promise.then((res) => {
    console.log("请求失败:", err)
 })
 
+// node当中不支持then和catch分开写。例如
+promise.then()
+promise.catch()
+
+// 可以优化成最上面的，也可以写成链式调用
+promise.then().catch()
 ```
+
++ Promise就是为了统一我们异步处理的传入回调函数的各种方案。
 
 ## 2. Promise的代码结构
 
@@ -224,6 +250,36 @@ foo(() => {})
 // 钩子函数虽然和回调函数差不多
 // 但是钩子函数是指windows的消息机制下，捕获消息的时候立即执行
 // 回调函数并不能参与消息处理的过程，只是消息捕获结束后才执行的函数
+```
+
+```js
+// 当没有使用resolve的时候，返回的promise状态一直处于pending
+
+const myPromise = new Promise((resolve, reject) => {
+  return '2';
+});
+
+console.log(myPromise); // Promise { <pending> }
+```
+
+```js
+// Promise返回的结果和调用resolve reject有关，return无关
+const myPromise = new Promise((resolve, reject) => {
+  // resolve('1'); // resolve传入的值，会作为then的第一个回调函数参数
+  reject('1'); // 同上，第二个回调函数的活着catch的参数
+  return '2';
+});
+
+console.log(myPromise); // Promise { '1' } 活着结果为 Promise { <rejected> '1' }
+
+myPromise
+  .then((aa) => {
+    console.log(aa);
+  })
+  .catch((err) => {
+    console.log(err);  // '1'
+  });
+
 ```
 
 ## 3. Promise重构请求
@@ -249,6 +305,25 @@ new Promise(() => {
   + 在我们调用resolve的时候，如果resolve传入的值本身不是一个Promise，那么会将该Promise的状态变成兑现（fulfilled）；
   + 在之后我们去调用reject时，已经不会有任何的响应了（并不是这行代码不会执行，而是无法改变Promise状态）；
 
+```js
+const myPromise = new Promise((resolve, reject) => {
+  resolve('确定状态为成功，后面无法再更改');
+  console.log('这里还会执行');
+  reject('前面已经确定状态了，这里已经无法更改，无意义了');
+  console.log('这里还会执行');
+  return ' return无意义';
+});
+
+myPromise
+  .then((aa) => {
+    console.log(aa);
+  })
+  .catch((err) => {
+    console.log(err);
+  });
+
+```
+
 ## 5. resolve不同值的区别
 
 + 情况一：如果resolve传入一个普通的值或者对象，那么这个值会作为then回调的参数；
@@ -268,6 +343,7 @@ promise.then((res) => {
 })
 
 // 等价于
+
 new Promise((resolve, reject) => {
     console.log("------")
     // resolve()
@@ -295,7 +371,7 @@ new Promise(() => {
 // 打印结果:
 -----
 +++++
-res: undefined  // resolve最后执行，
+res: undefined  // 执行then
 
 // 一旦执行的resolve进入成功状态，调用reject()也不会改变当前状态，反之相同
 new Promise(() => {
@@ -416,6 +492,8 @@ const obj = {
 
 ```
 
++ 大白话：resolve里面嵌套Promise、thenable的话，我们必须确定里面的状态再返回。如果最终出现一个普通值或对象，说明整个流程的Promise都是已兑现的，如果出现失败，说明整个流程是失败的
+
 ## 6. then方法-接受两个参数
 
 + then方法是Promise对象上的一个方法：它其实是放在Promise的原型上的`Promise.prototype.then`
@@ -424,6 +502,11 @@ const obj = {
   + reject的回调函数：当状态变成reject时会回调的函数；
 
 ![image-20220413163006276](18-响应式原理实现和Promise.assets/image-20220413163006276.png)
+
+```js
+console.log(Promise.prototype) // 打印为空是因为可枚举属性设置为false
+// class定义类本质上用的构造函数和一系列操作的语法糖
+```
 
 ```js
 class Person {
@@ -468,6 +551,14 @@ promise.then(res => {
   console.log("res3:", res)
 })
 
+// 上面三个等价于
+promise.then(res => {
+  console.log("res1:", res)
+  console.log("res2:", res)
+  console.log("res3:", res)
+})
+
+
 // 注意和这个是有区别的
 promise.then(res => {}).then(res => {})
 // 假如第一个then有返回一个prosmise并触发resolve才会执行第二个，两个then处理的还是不是同一个promise
@@ -477,13 +568,14 @@ promise.then(res => {}).then(res => {})
 
 + then方法本身是有返回值的，它的返回值是一个Promise，所以我们可以进行如下的链式调用：
   + 但是then方法返回的Promise到底处于什么样的状态呢？
+    + 根据回调函数的返回值决定then的返回值
 + Promise有三种状态，那么这个Promise处于什么状态呢？
   + 当then方法中的回调函数本身在执行的时候，那么它处于pending状态；
   + 当then方法中的回调函数返回一个结果时，那么它处于fulfilled状态，并且会将结果作为resolve的参数；
-    ü 情况一：返回一个普通的值；
-    ü 情况二：返回一个Promise；
-    ü 情况三：返回一个thenable值；
-    p当then方法抛出一个异常时，那么它处于reject状态；
+    + 情况一：返回一个普通的值； 
+    + 情况二：返回一个Promise；
+    + 情况三：返回一个thenable值；
+    + 当then方法抛出一个异常时，那么它处于reject状态；
 
 ```js
 // Promise有哪些对象方法
@@ -495,10 +587,54 @@ const promise = new Promise((resolve, reject) => {
 ```
 
 ```js
+// 当我们打印一个Promise的时候，能够看到里面会有表示的状态，活着返回值
+// 比如返回的结果
+const myPromise = new Promise((res, rej) => {
+  res('xps');
+});
+conosole.log(myPromise) // Promise { {name: 'xps'} }     
+// 可以看出，本身打印promise也是携带信息的。                         
+                                             
+myPromise.then(res => {return 'xps'})
+// 等价于
+myPromise.then(res => {return new Promise((res, rej) => {
+	res('xps')
+})})                                             
+
+```
+
+```js
+const myPromise = new Promise((res, rej) => {
+  res('xps');
+});
+
+// 所以打印Promise.then
+console.log(myPromise.then(res => {return 'xps'})) // Promise { <pending> }
+// 思考上面为什么打印的是pending。因为then是一个异步的操作。里面的回调函数会异步调用，当异步还没有执行的时候，打印就是pending
+```
+
+```js
+// 当我们then有了结果就会传递给链式调用的then中
+const myPromise = new Promise((res, rej) => {
+  res('1');
+});
+
+const thenRes = myPromise
+  .then((res) => {
+    console.log(res);  // '1'
+    return '2';
+  })
+  .then((res) => {
+    console.log(res); // 拿到上一个then的返回值，打印'2'
+  });
+
+```
+
+```js
 // 2.then方法传入的 "回调函数: 可以有返回值
 // 1> 如果我们返回的是一个普通值(数值/字符串/普通对象/undefined), 那么这个普通的值被作为一个新的Promise的resolve值
 promise.then(res => {
-  return "aaaaaa" // 如果不屑返回值，默认是一个undefined
+  return "aaaaaa" // 如果没有返回值，默认是一个undefined
 }).then(res => {
     console.log("res", res)
     return "bbbbb"
@@ -570,6 +706,9 @@ promise.then(res => {
 
 ```
 
++ then返回的结果和resolve一样，也是也要确认里面的Promise，再返回。
++ then的返回值的规则和resolve一样。
+
 ## 9. catch方法- 多次调用
 
 + catch方法也是Promise对象上的一个方法：它也是放在Promise的原型上的`Promise.prototype.catch`
@@ -578,8 +717,43 @@ promise.then(res => {
   + 当Promise的状态变成reject的时候，这些回调函数都会被执行；
 
 ```js
+const myPromise = new Promise((res, rej) => {
+
+});
+
+myPromise.then(res => {}, rej => {})
+
+// 可以写成
+myPromise.then(res => {})
+// 缺点，是这样写catch不符合Promise a+规范
+myPromise.catch(rej => {})
+
+
+// 也可以写成,但是catch只能捕获一次异常
+myPromise.then().catch()
+
+```
+
+```js
+const myPromise = new Promise((res, rej) => {
+  rej('1');
+});
+
+myPromise
+  .then(() => {
+    return new Promise((res, rej) => {
+      rej('2');
+    });
+  })
+  .catch((res) => {
+    console.log(res); // 打印1，2无法捕获
+  });
+// 可以理解成在整个链式中捕获第一次的异常，剩下的交给后面的catch
+```
+
+```js
 const promise = new Promise((resolve, reject) => {
-    reject("rejected status")
+    // reject("rejected status")
     // 1. 当我们抛出异常时，也是会调用错误捕获的回调函数的
     throw new Error("rejected status")
 })
@@ -593,13 +767,10 @@ promise.then(undefined, (err) => {
 promise.then(res => {
     
 }).catch(err => {
-    // 如果第一个promise报出异常就捕获，如果没有等下一个。如果下一个promise抛出异常也会被捕获
+    // 如果第一个promise报出异常就捕获，如果没有等下一个。如果下一个promise抛出异常也会被捕获。
 })
 
-// 等价于
-promise.catch((err) => {
-    
-} )
+
 ```
 
 ```js
@@ -620,6 +791,7 @@ promise.then (res => {
     
 })
 
+// 这种分开写，算是一种语法糖，但是不符合Promise a+的规范
 promise.catch(err => {
     
 })
@@ -634,55 +806,6 @@ promise.catch(err => {
 + 那么如果我们希望后续继续执行catch，那么需要抛出一个异常：
 
 ```js
-// const promise = new Promise((resolve, reject) => {
-//   resolve()
-//   // reject("rejected status")
-//   // throw new Error("rejected status")
-// })
-
-// 1.当executor抛出异常时, 也是会调用错误(拒绝)捕获的回调函数的
-// promise.then(undefined, err => {
-//   console.log("err:", err)
-//   console.log("----------")
-// })
-
-// 2.通过catch方法来传入错误(拒绝)捕获的回调函数
-// promise/a+规范
-// promise.catch(err => {
-//   console.log("err:", err)
-// })
-// promise.then(res => {
-//   // return new Promise((resolve, reject) => {
-//   //   reject("then rejected status")
-//   // })
-//   throw new Error("error message")
-// }).catch(err => {
-//   console.log("err:", err)
-// })
-
-
-// 3.拒绝捕获的问题(前面课程)
-// promise.then(res => {
-
-// }, err => {
-//   console.log("err:", err)
-// })
-// const promise = new Promise((resolve, reject) => {
-//   reject("111111")
-//   // resolve()
-// })
-
-// promise.then(res => {
-// }).then(res => {
-//   throw new Error("then error message")
-// }).catch(err => {
-//   console.log("err:", err)
-// })
-
-// promise.catch(err => {
-
-// })
-
 // 4.catch方法的返回值
 const promise = new Promise((resolve, reject) => {
   reject("111111")
@@ -692,8 +815,10 @@ promise.then(res => {
   console.log("res:", res)
 }).catch(err => {
   console.log("err:", err)
+  // catch返回值的效果和then一样，返回一个Promise，所以后面的then会执行
   return "catch return value"
 }).then(res => {
+  // 拿到catch返回的Promise，执行
   console.log("res result:", res)
 }).catch(err => {
   console.log("err result:", err)
@@ -715,14 +840,15 @@ const promise = new Promise((resolve, reject) => {
   throw new Error("22222")
   console.log('------------');
 })
-// throw 后面的不会再执行，但是抛出异常的优先级，哪个先抛出，哪个优先
+
 
 const promise = new Promise((resolve, reject) => {
+  // throw 后面的不会再执行，但是抛出异常的优先级，哪个先抛出，哪个优先
   throw new Error("22222")
   reject("111111")
   console.log('------------');
 })
-// 22222 直接抛出就不执行了
+// 22222 直接抛出后 就不执行了
 
 
 promise.catch(err => {
@@ -751,8 +877,8 @@ promise.then(res => {
 ## 11. finally方法
 
 + finally是在ES9（ES2018）中新增的一个特性：表示无论Promise对象无论变成fulfilled还是reject状态，最终都会被执行的代码。
-
 + finally方法是不接收参数的，因为无论前面是fulfilled状态，还是reject状态，它都会执行。
++ Promise a+规范里其实没有finally的。ECMA自己做的扩展。
 
 ```js
 const promise = new Promise((resolve, reject) => {
@@ -767,7 +893,7 @@ promise.then(res => {
 }).finally(() => {
   console.log("finally code execute")
 })
-// 不需要参数，最终会被执行
+// finally不接受参数，设计之初就是无论什么状态最终都会被执行
 ```
 
 ## 12. resolve方法
@@ -787,6 +913,22 @@ promise.then(res => {
   + 情况一：参数是一个普通的值或者对象
   + 情况二：参数本身是Promise
   + 情况三：参数是一个thenable
+
+```js
+function foo() {
+  return 1
+}
+
+// 希望返回一个Promise。想要拿到具体结果，通过then，假如报错可以使用catch
+function foo() {
+  return Promise.resolve(1)
+  // 等啊机遇
+  // return new Promise((res) => { return res(1) })
+}
+
+const result = foo()
+result.then(res => console.log(res) )
+```
 
 ```js
 function foo() {
@@ -833,6 +975,7 @@ promise.then(res => {
 ![image-20220413204916010](18-响应式原理实现和Promise.assets/image-20220413204916010.png)
 
 + `Promise.reject`传入的参数无论是什么形态，都会直接作为reject状态的参数传递到catch的。
+  + 这里和Promise.resolve的区别，传入什么值都直接返回出去。不关系里面是啥，只要拒绝了就拒绝了。
 
 ```js
 // 相当于生成一个promise，但是被reject调用了
@@ -890,21 +1033,26 @@ const p3 = new Promise((resolve, reject) => {
 })
 
 // 需求：所有的Promise都变成fulfilled时，再拿到结果
-// 1. 传入一个数组，每个内容都是一个Promise，如果不是就转成Promise，通过调用Promise.resolve()
+// 1. 传入一个数组，每个内容都是一个Promise，如果不是就转成Promise，通过调用Promise.resolve()。
+//     例如传入的'aaa',就会被调用成Promise.resolve('aaa')。这样返回的所有结果都是统一Promise。规范。
+
 // 2. 返回的也是Promise里面是一个数组保存各个Promise的结果，是写入的Promise数组的顺序
 
 // 3. 意外：在拿到所有结果之前，有一个promise变成了rejected，那么整个promise是rejected
+
 Promise.add([p1, p2, p3, 'aaaa']).then(res => {
     console.log(res) //
 }).catch(err => {
     console.log(err)
 })
+
+// 返回结果是一个数组，数组内的顺序按照你传入promise的顺序
 [11111, 22222, 33333, 'aaaa']
 ```
 
 ## 15. allSettled方法
 
-+ all方法有一个缺陷：当有其中一个Promise变成reject状态时，新Promise就会立即变成对应的reject状态。
++ all方法有一个缺陷：当有其中一个Promise变成reject状态时，新Promise就会立即变成对应的reject状态，然后调用catch。这样子你就不知道哪些成功了。也不能获取已经成功的方法。
   + 那么对于resolved的，以及依然处于pending状态的Promise，我们是获取不到对应的结果的；
 + 在ES11（ES2020）中，添加了新的API Promise.allSettled：
   + 该方法会在所有的Promise都有结果（settled），无论是fulfilled，还是reject时，才会有最终的状态；
@@ -942,7 +1090,8 @@ Promise.allSettled([p1,p2,p3]).then(res => {
     // allSettled不会来到catch里面
     console.log(err)
 })
-// 结果
+
+// 最终返回：会带上状态和结果
 [
     {status: 'fufilled', value: 1111},
     {status: 'rejected', reason: 2222},
@@ -1030,6 +1179,27 @@ Promise.any([p1, p2, p3]).then(res => {
 
 
 ```
+
+总结：
+
++ all和allSettled
+  + all只要一个reject，结果就reject。allSettled会等所有结果
++ race和any
+  + race只要拿到第一个是reject，结果reject。any会一直等到成功。如果所有都是reject，才会触发catch。
+
+## 18. 什么是Promise
+
++ 一种异步请求的处理规范，规范好了所有代码别写逻辑，按照预设的方法去获取异步结果。
++ 在js中是一个类。
+
++ 需要注意的细节：
+
+  ```js
+  new Promise(回调函数)
+  // 传入的回调函数会被立即执行
+  ```
+
++ Promise的状态一旦确定下来后是不可更改的
 
 # 2. 手写Promise
 
