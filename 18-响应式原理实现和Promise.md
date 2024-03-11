@@ -631,7 +631,7 @@ const thenRes = myPromise
 ```
 
 ```js
-// 2.then方法传入的 "回调函数: 可以有返回值
+// 2.then方法传入的 回调函数: 可以有返回值
 // 1> 如果我们返回的是一个普通值(数值/字符串/普通对象/undefined), 那么这个普通的值被作为一个新的Promise的resolve值
 promise.then(res => {
   return "aaaaaa" // 如果没有返回值，默认是一个undefined
@@ -671,7 +671,7 @@ promise.then(res => {
   console.log("res3:", res)
 })
 
-// 2.then方法传入的 "回调函数: 可以有返回值
+// 2.then方法传入的 回调函数: 可以有返回值
 // then方法本身也是有返回值的, 它的返回值是Promise
 
 // 1> 如果我们返回的是一个普通值(数值/字符串/普通对象/undefined), 那么这个普通的值被作为一个新的Promise的resolve值
