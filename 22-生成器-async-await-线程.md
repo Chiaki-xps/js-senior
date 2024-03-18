@@ -30,6 +30,8 @@ class Foo {
   + 情况二：如果我们的异步函数的返回值是Promise，Promise.resolve的状态会由Promise决定；
   + 情况三：如果我们的异步函数的返回值是一个对象并且实现了thenable，那么会由对象的then方法来决定；
 + 如果我们在async中抛出了异常，那么程序它并不会像普通函数一样报错，而是会作为Promise的reject来传递；
++ 从上面不难看出，async是promise和生成器的语法糖。你可以直接理解成异步函数的返回值，最终会被Promise.resolve包裹，那么情况一二三，遵守的就是Promise.resolve的规则。
++ 异步函数的返回值一定是一个Promise。
 
 ```js
 async function foo() {
@@ -62,6 +64,20 @@ foo function end~
 script end
 */
 
+```
+
+```js
+async function foo() { return '1' }
+
+// Promise { '1' }
+console.log(foo());
+
+// 异步函数的返回结果一定是一个Promise 
+
+// 所以可以执行then
+foo().then(res => {
+  console.log(res) // '1'
+})
 ```
 
 ```js
@@ -136,7 +152,7 @@ console.log("后续还有代码~~~~~")
 + async函数另外一个特殊之处就是可以在它内部使用await关键字，而普通函数中是不可以的。
 + await关键字有什么特点呢？
   + 通常使用await是后面会跟上一个表达式，这个表达式会返回一个Promise；
-  + 那么await会等到Promise的状态变成fulfilled状态，之后继续执行异步函数；
+  + 那么await会等到Promise的状态变成fulfilled状态，拿到里面的resolve的结果，之后继续执行异步函数；
 +  如果await后面是一个普通的值，那么会直接返回这个值；
 + 如果await后面是一个thenable的对象，那么会根据对象的then方法调用来决定后续的值；
 + 如果await后面的表达式，返回的Promise是reject的状态，那么会将这个reject结果直接作为函数的Promise的reject值；
@@ -154,6 +170,21 @@ async function foo() {
 }
 
 // 一般await跟的是一个表达式，这个表达式返回的是一个Promise
+```
+
+```js
+async function foo() {
+  const res = await 'xps';
+  console.log(res);
+  return '1';
+}
+
+console.log(foo());
+
+// Promise { <pending> }
+// xps
+
+// 思考：为什么打印结果是pending？
 ```
 
 ```js
@@ -183,6 +214,19 @@ async function foo() {
   const res2 = await requestData()
   console.log("res2后面的代码", res2)
 }
+
+```
+
+```js
+const xps = await new Promise((resolve, rej) => { resolve(1) })
+console.log('222')
+
+// 可以理解成
+new Promise((resolve, rej) => { resolve(1) })
+	.then(res => {
+  			xps = res;
+  			console.log('222')
+	})
 
 ```
 
@@ -690,12 +734,6 @@ node其他线程会帮助完成一些耗时操作，网络请求、文件读取�
     + poll queue：IO事件；
     + check queue：setImmediate；
     + close queue：close事件；
-
-
-
-
-
-略
 
 
 

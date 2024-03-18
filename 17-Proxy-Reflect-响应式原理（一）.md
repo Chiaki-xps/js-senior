@@ -1249,15 +1249,15 @@ foo.name = "bar"
 
 ## 8. 总结
 
-1. 使用reactive的时候会创建一个Proxy实例，并返回
-2. 函数第一次执行的时候，进入到Proxy中get捕获器，在这里会进入Depend创建收集依赖，创建映射关系
-3. 当我改变属性值的时候，进入Proxy中set捕获去，通过映射关系找到依赖的函数，执行。
+1. 使用reactive的时候会创建一个Proxy实例，并返回代理对象
+2. 函数第一次执行的时候，进入到Proxy中get捕获器，在这里会创建Depend并收集依赖，创建映射关系Map，属性和Set数据结构，里面存放使用该属性的方法。
+3. 当改变属性值的时候，进入Proxy中set捕获器 ，找到映射关系找到依赖的函数，执行函数。
 
 + 这就是基本的响应式流程
 
 ## 9. vue2响应式原理
 
-+ vue用的是Object.defineProerty
++ Vue2用的是Object.defineProerty
 + Object.defineProerty每次只能对一个属性进行修改描述符，因此需要对对象进行遍历，进行每一个修改
 + 在setter和getter方法中的逻辑和前面的Proxy是一致 的
 
