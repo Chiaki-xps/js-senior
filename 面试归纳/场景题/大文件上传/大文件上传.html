@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <input type="file" />
+
+    <script src="./spark-md5.js"></script>
+
+    <script>
+      const inp = document.querySelector('input');
+
+      inp.onchange = (e) => {
+        const file = inp.files[0];
+        if (!file) {
+          return;
+        }
+
+        const chunks = createChunks(file, 10 * 1024 * 1024);
+
+        hash(chunks);
+      };
+
+      // File是特殊的Blob类型。基于Blob
+      // 两者都是描述文件的基本信息。但并没有保存文件数据。
+      // FileReader 对象允许 Web 应用程序异步读取存储在用户计算机上的文件（或原始数据缓冲区）的内容，使用 File 或 Blob 对象指定要读取的文件或数据。
+
+      // 增量算法 -> 每次计算hash，通过拿到现在的chunks加上上一个chunks计算的hash，计算出新的hash
+      // 如果文件过大的话，一般会在其他线程web worker里进行计算。
+      function hash(chunks) {
+        const spark = new SparkMD5();
+        function read(i) {
+          if (i >= chunks.length) {
+            // 打印hash值
+            console.log(spark.end());
+            return; // 读取完成
+          }
+
+          const blob = chunks[i];
+          const reader = new FileReader();
+
+          // 1. 先注册读取完成后的操作事件
+          reader.onload = (e) => {
+            const bytes = e.target.result;
+
+            spark.append(bytes);
+            read(i + 1);
+          };
+
+          // 2. 获取指定blob内容
+          reader.readAsArrayBuffer(blob);
+        }
+        read(0);
+      }
+
+      // 文件切片
+      function createChunks(file, chunkSize) {
+        const result = [];
+        for (let i = 0; i < file.size; i += chunkSize) {
+          result.push(file.slice(i, i + chunkSize));
+        }
+        return result;
+      }
+    </script>
+  </body>
+</html>
