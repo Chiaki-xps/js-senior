@@ -123,13 +123,50 @@ function add(x: Types, y: Types) {
 let arr: [number, string] = [1, 'xps'];
 
 arr = [1, 2] // Error
+arr = [1] // 目标两个元素
 ```
 
-### 元组可选元素
++ **可选类型：**在类型后面加个`?`表示可选元素
 
 ```typescript
+let arr: [number, string?] = [1, 'xps'];
 
+arr = [1]; // 正确
+arr = [2, 'chiaki'] // 正确
+arr = [2, 3] // Error
 ```
+
++ **剩余参数：**剩余元素语法`...arg`，此时`arg`是数组类型
+
+```typescript
+const arr: [number, ...string[]] = [1, 'a', 'b'];
+```
+
++ **只读元组：**`readonly`
+
+```typescript
+const arr: readonly number[] = [1, 2, 3];
+
+arr[0] = 2; // 智能读，不能修改
+```
+
+## void
+
+void表示没有类型，严格模式下，不能给任何类型赋值（null、undefined）。主要应用场景还是表示函数的返回值，表示没有返回值（即返回值为undefined）。
+
+```typescript
+function foo(): void {}
+foo();
+
+function bar(): undefined {}
+bar();
+```
+
+## never
+
++ never类型表示的
+
+
 
 
 ```typescript
