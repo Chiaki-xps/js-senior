@@ -150,7 +150,7 @@ const arr: readonly number[] = [1, 2, 3];
 arr[0] = 2; // 智能读，不能修改
 ```
 
-## void
+## 8. void
 
 void表示没有类型，严格模式下，不能给任何类型赋值（null、undefined）。主要应用场景还是表示函数的返回值，表示没有返回值（即返回值为undefined）。
 
@@ -162,7 +162,7 @@ function bar(): undefined {}
 bar();
 ```
 
-## never
+## 9. never
 
 + never类型表示的不存在的值的类型。（例如抛出异常、死循环永远没有返回值）
 
@@ -655,9 +655,9 @@ interface Sizeable {
 
 ```
 
-### 30.2 泛型工具类型
+## 31. 泛型工具类型
 
-#### 1. typeof
+### 1. typeof
 
 + typeof 的主要用途是在类型上下文中获取变量或者属性的类型
 + `typeof 变量（注意后面带的是属性或者变量，不是类型）`
@@ -736,7 +736,7 @@ function prop<T extends object, K extends keyof T>(obj: T, key: K) {
 
 ```
 
-## in
+### 3. in
 
 + 遍历枚举类型
 
@@ -756,11 +756,11 @@ type Obj = {
 
 ```
 
-## extends用法总结
+### 4. extends用法总结
 
 + extend在TS中主要两个用法，一个是接口继承和条件判断。
 
-## infer
+## 5. infer
 
 + TS中，infer关键字用于在条件类型中推断类型。
 
