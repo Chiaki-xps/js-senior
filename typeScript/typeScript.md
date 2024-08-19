@@ -27,6 +27,7 @@ let sym: symbol = Symbol('me');
 ## 3. null 和 undefined 是所有类型的子类型
 
 - 在`tsconfig.json`中设置`strictNullChecks":true`。这样 null 和 undefined 才可以作为子类型被使用。
+- null 和 undefined 是所有类型的子类型。
 
 ```typescript
 let num: number = null;
@@ -73,14 +74,22 @@ interface func {
 }
 
 //  函数表达式
-let mySun: (num1: number, num2: number) => number = function (x, y) {
+let mySum: (num1: number, num2: number) => number = function (x, y) {
   return x + y;
 };
 /**
  * 可以理解成，类型约束的格式是
  * (num1: number, num2: number) => number
- * 后面的等于号则是负值ß
+ * 后面的等于号则是赋值
+ * 所以 mySum被定义成一个函数的格式 mySum: (num1: number, num2: number) => number
+ * 后面的等于号就是符合这个格式的赋值
  */
+
+// 箭头函数
+const add = (a: number, b: number): number => {
+  return a + b;
+};
+const get = (): void => {};
 
 // 可选参数,可选参数后面不能再出现其他必选参数
 function myName(name?: string) {
@@ -117,7 +126,8 @@ function add(x: Types, y: Types) {
 
 ## 7. Tuple（元组）
 
-- 元组的作用就是限制数组元素的个数和类型。意味着元组类型个数，和每个元素的类型都是确定的
+- 元组的作用就是限制数组元素的个数和类型。意味着**元组类型个数，和每个元素的类型都是确定的**
+- js 是没有元组，如果超出的解构，会被认为是 undefined,但是 TS 中会报错.赋值也同样
 
 ```typescript
 let arr: [number, string] = [1, 'xps'];
@@ -136,7 +146,7 @@ arr = [2, 'chiaki']; // 正确
 arr = [2, 3]; // Error
 ```
 
-- **剩余参数：**剩余元素语法`...arg`，此时`arg`是数组类型
+- **剩余元素：**剩余元素语法`...arg`，此时`arg`是数组类型
 
 ```typescript
 const arr: [number, ...string[]] = [1, 'a', 'b'];
@@ -165,6 +175,8 @@ bar();
 ## 9. never
 
 - never 类型表示的不存在的值的类型。（例如抛出异常、死循环永远没有返回值）
+- never 类型和 null undefined 一样,都是任何类型的子类型,可以赋值给任何类型
+- 但是没有类型是 never 的子类型,所以除了 never 类型可以赋值给 never,其他都不行,即使是 any
 
 ```typescript
 function err(msg: string): never {
@@ -198,6 +210,7 @@ function controlFlowAnalysisWithNever(foo: Foo) {
 
 - 任何类型都可以被归为 any 类型。any 类型是类型系统的顶级类型。
 - 变量如果在声明的时候，未指定其类型，那么它会被识别为任意值类型。
+- 在 any 上访问任何属性的都是被允许的
 
 ## 11. unknown
 
@@ -223,6 +236,7 @@ any2 = unknown2;
   - 两者是有区别的，一个是基本类型，一个是对象类型
   - 基本类型可以赋值给它对应的包装器对象。
   - 但是包装器对象类型不能赋值给它对应的基类
+- 尽可能不要使用对象类型来注解值的类型
 
 ```typescript
 let num: number = 1;
@@ -268,6 +282,13 @@ const arr3: number | undefined = arr.find((num) => num > 2);
 // 如果你非常确定在这个代码执行中不会出现undefined，可以使用类型断言as
 // 解决二：as
 const arr4: number = arr.find((num) => num > 2) as number;
+
+// 类型断言的两种语法
+let value: any = 'this is a string';
+// 在变量前面使用尖括号,表示必定是 string 类型
+let strLength: number = (<string>value).length;
+// 在变量后面 as 指定, 必然是当前类型(推荐)
+let strLength: number = (value as string).length;
 ```
 
 ```typescript
@@ -276,6 +297,7 @@ let a = '1' as const; // a的类型是字符串字面量 '1'
 
 ## 15. 非空断言`x!`
 
+- 变量后面带感叹号,表示该变量是非空的
 - `x!`表示变量 x 的值域排除`null`和`undefined`
 
 ```typescript
@@ -286,7 +308,7 @@ height = age!;
 
 ## 16. 确定赋值断言`!:`
 
-- 和上面的`x!`不一样，`x!: 类型`的作用是告诉 TS 编译器，这个变量一定会被赋值
+- 和上面的`x!`不一样，`x!: 类型`的作用是告诉 TS 编译器，这个变量一定会被赋值过
 
 ```typescript
 let x: number;
@@ -305,6 +327,8 @@ let x!: number;
 ```
 
 ## 17. 字面量类型
+
+- 支持三种字面量,字符串 数字 布尔字面量
 
 ```typescript
 let str: 'xps' | 'chiaki' | 1;
@@ -325,17 +349,18 @@ const str = 'i am xps'; // 推断str的类型是'i am xps'
 let str2 = 'i am chiaki'; // 推断str2类型是 string
 ```
 
-## 19. 类型拓宽
+## 19. 类型拓宽(Type Widening)
 
 - 没有指定类型，定义常量 TS 会解析为字面量类型。变量会进行类型拓宽到父类型
 - 非严格模式下：如果没有显示声明类型，并且被赋值为 null 和 undefined。类型拓宽为 any。
+- 严格模式下,null 和 undefined 不会被拓宽成 any
 
 ```typescript
 let age; // 类型为any
 age = 12; // 类型为any
 
 let x = null; // 类型为null
-x = 'boy'; // 严格模式下报错，sex类为null
+x = 'boy'; // 严格模式下报错，x类为null
 
 let y = undefined;
 y = 123; // 不能将类型“123”分配给类型“undefined”
@@ -360,9 +385,11 @@ let vec = { x: 10, y: 20, z: 30 };
 getComponent(vec, x); // Error
 ```
 
-## 20. 类型缩小
+## 20. 类型缩小(Type Narrowing)
 
 - TS 会根据上下文进行判断，比如通过 if 之类的，缩小类型。
+- js 中 typeof null 结果是 object
+- 空字符串和 0 属于 falsy 值
 
 ## 21. 联合类型`|`
 
@@ -394,7 +421,7 @@ const obj: obj = {
 // 加入联合的对象有重复的key，并且类型不同会怎么样？
 type obj = { age: number } & { age: string };
 
-// 等价于,能够同时是两个基本类型的类型就只能是不存在类型即never
+// 等价于,能够同时是两个基本类型的类型就只能是不存在类型即never, age:never
 type obj1 = { age: number & string };
 
 const obj: obj = {
@@ -413,7 +440,7 @@ const obj: obj = {
 
 ```typescript
 interface Person {
-  readonly name: string;
+  readonly name: string; // 在属性前面加个readonly
   age?: number; // 此时的age的类型是 age: number | undefined
 }
 
@@ -752,7 +779,8 @@ type Obj = {
 ## 面试问题
 
 - 什么是函数重载
+- null 和 undefined 是所有类型的子类型。
 
-# 遗留问题
+## 遗留问题
 
 - 怎么配置 tsconfig.json
