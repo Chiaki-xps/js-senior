@@ -11,7 +11,7 @@
 - 没有设置过期时间，默认情况下 cookie 是内存 cookie，在关闭浏览器时会自动删除；
 - 有设置过期时间，并且过期时间不为 0 或者负数的 cookie，是硬盘 cookie，需要手动或者到期时，才会删除；
 - **Cookie 往往是由服务器设置的，然后在浏览器发送下一次请求的时候会带上去 Cookie 过去**
-- 服务器设置得 Cookie 会在响应头得 Set-Cookie 中显示,实际会存到硬盘里，只是不设置过期时间，显示过期时间是会话。
+- 服务器设置得 Cookie 会在响应头得 Set-Cookie 中显示，只是不设置过期时间，显示过期时间是会话,在测试中，整个浏览器关闭了之后会话 cookie 就会消失。如果设置了过期时间，到时间后，浏览器会自动删除这个 cookie。
 
 ![image-20220616165958403](29-Cookie-BOM浏览器操作.assets/image-20220616165958403.png)
 
@@ -24,6 +24,7 @@
 ![image-20220617180531951](29-Cookie-BOM浏览器操作.assets/image-20220617180531951.png)
 
 ```js
+/// Koa中通过 ctx.cookies.set设置cookie。通过get的方式读取cookie
 const Koa = require('koa');
 const Router = require('koa-router');
 
@@ -60,7 +61,7 @@ app.listen(8000, () => {
 
 - cookie 的生命周期：
 
-  - 默认情况下的 cookie 是内存 cookie，也称之为会话 cookie，也就是在浏览器关闭时会自动被删除；
+  - 默认情况下的 cookie 是内存 cookie，也称之为会话 cookie，也就是在浏览器关闭时会自动被删除（实际测试，把整个浏览器关了之后会话 cookie 才会消失）；
   - 我们可以通过设置 expires 或者 max-age 来设置过期的时间；
     - expires：设置的是 Date.toUTCString()，设置格式是;expires=date-in-GMTString-format；
     - max-age：设置过期的秒钟，;max-age=max-age-in-seconds (例如一年为 60*60*24\*365)；
@@ -76,27 +77,28 @@ app.listen(8000, () => {
 
     - 不设置意味着子路径都可以，设置了那么只有在这个子路径下的路径可以携带 cookie
 
-    - 例如，设置 Path=/docs，则以下地址都会匹配：
+    - 例如，设置 Path=/docs，则以下地址都会匹配（子路径会被匹配）：
       - /docs
       - /docs/Web/
       - /docs/Web/HTTP
 
-  - HttpOnly：如果设置了这个属性为 true，前端没有办法访问和修改这个 cookie 的，这是为了防止跨站脚本攻击 XSS。
+  - HttpOnly：如果设置了这个属性为 true，前端没有办法访问和修改这个 cookie 的，这是为了防止跨站脚本攻击 XSS。只能用于请求携带
   - Secure `/sɪˈkjʊə(r)/`：设置为 true 的时候，指定只能通过 Https 协议传输时，cookie 次啊会附加到请求中。防止不安全请求泄露 cookie。
   - SameSite：用于控制 cookie 的跨站请求策略，助防止跨站请求伪造（CSRF）攻击。SameSite 不会影响前端修改 cookie 权限，影响的是 cookie 的发送行为。
+
     - Strict：只有请求来自同一站点，浏览器才会携带。
-    - Lax：可以理解成站点 A 中（a 链接、window.open）打开站点 B，GET 请求中携带了站点 A 的 cookie。
+    - Lax：可以理解成站点 A 中（a 链接、window.open）打开站点 B，请求中携带了站点 A 的 cookie。(除了 POST 请求都可以带上)
     - None：所有请求带上
+
+  - 前端设置 cookie，通过 `document.cookie = 'name = xps'`
+
+- 总结：普通情况下，cookie 会在浏览器请求的时候，自动在响应头上携带 cookie。这取决与 cookie 的属性 domain 和 path 的设置。Secure 限制了是否为 HTTPS 请求。SameSite 的是限制了请求中携带 cookie 的方式。HttpOnly 决定了前端读写权限.服务端设置的 cookie 浏览器会自动保存到本地
 
 ### 2. 客户端设置 cookie
 
-- 这个学的不仔细
-
-- js 直接设置和获取 cookie
-  - cookie 在我们的 document 里面
+- 前端通过`document.cookie`操作 cookie。删除也是通过`document.cookie='...xxx;max-age=0'`设置生命时间为 0，浏览器会自动删除
 
 ```js
-// 我们js是获取不到服务器设置的cookie
 // 但是我们可以获取我们js代码自己设置的cookie
 console.log(document.cookie);
 
@@ -107,13 +109,13 @@ document.cookie = 'name=why;max-age=0';
 - 这个 cookie 会在会话关闭时被删除掉；
 
 ```js
-
+document.cookie = 'name=xps';
 ```
 
 - 设置 cookie，同时设置过期时间（默认单位是**秒钟**）
 
 ```js
-document.cookie = 'name=coderwhy;max-age=10';
+document.cookie = 'name=xps;max-age=10'; // 键值对用;分开
 ```
 
 - 总结：服务器设置 cookie 后，
@@ -122,7 +124,78 @@ document.cookie = 'name=coderwhy;max-age=10';
   3. 大小限制：4kb
   4. cookie 验证登陆，浏览器请求会携带 cookie，但是其他客户端比如 ios、安卓之类的进行请求服务器的时候可能需要手动携带，比较麻烦。
 
-## 2. 认识 BOM（浏览器对象模型）
+## 2. session
+
+- 前端设置 session 通过 sessionStorage
+- sessionStorage 不会在请求中携带，标签页关闭就会消失
+
+```js
+// 存储数据到 sessionStorage
+sessionStorage.setItem('sessionId', 'abc123');
+
+// 读取数据
+let sessionId = sessionStorage.getItem('sessionId');
+
+// 移除数据
+sessionStorage.removeItem('sessionId');
+
+// 清空所有 sessionStorage 数据
+sessionStorage.clear();
+```
+
+- 后端设置 session 本质上依附的还是 cookie。这样就能实现后端设置 session，然后请求能够携带上，本质上还是 cookie
+
+```js
+// Koa中实现方式通过三方库 koa-session
+// 本质上就是给ctx中增加属性session（可以自定义这个名字）。然后接口返回的时候后，将数据放入到cookie中
+const Koa = require('koa');
+const Router = require('koa-router');
+const Session = require('koa-session');
+
+const app = new Koa();
+
+const testRouter = new Router();
+
+// 创建Session的配置
+const session = Session(
+  {
+    key: 'sessionid',
+    maxAge: 10 * 1000,
+    // 是否使用加密签名。如果不为true，设置的内容会直接转成base
+    signed: true,
+  },
+  app
+);
+app.keys = ['aaaa'];
+// 这个中间件会给ctx增加一个属性session
+app.use(session);
+
+// 登录接口
+testRouter.get('/test', (ctx, next) => {
+  // name/password -> id/name
+  const id = 110;
+  const name = 'xps';
+
+  // 相当于内容是 {"user":{"id":110,"name":"xps"} -> 返回的时候转成base64。如果设置了加密，会转成加密内容
+  ctx.session.user = { id, name };
+
+  ctx.body = 'test';
+});
+
+testRouter.get('/demo', (ctx, next) => {
+  console.log(ctx.session.user);
+  ctx.body = 'demo';
+});
+
+app.use(testRouter.routes());
+app.use(testRouter.allowedMethods());
+
+app.listen(8080, () => {
+  console.log('服务器启动成功~');
+});
+```
+
+## 3. 认识 BOM（浏览器对象模型）
 
 - JavaScript 有一个非常重要的运行环境就是浏览器，而且浏览器本身又作为一个应用程序需要对其本身进行操作，所以通常浏览器会有对
   应的对象模型（BOM，Browser Object Model）。
@@ -143,7 +216,7 @@ document.cookie = 'name=coderwhy;max-age=10';
   - 身份二：**浏览器窗口对象**。
     - 作为浏览器窗口时，提供了对浏览器操作的相关的 API；
 
-## 3. Window 全局对象
+## 4. Window 全局对象
 
 - 在浏览器中，window 对象就是之前经常提到的全局对象，也就是我们之前提到过 GO 对象：
   - 比如在全局通过 var 声明的变量，会被添加到 GO 中，也就是会被添加到 window 上；
@@ -170,7 +243,7 @@ console.log(obj);
 - 这些用法是我们之前讲过的，并且也是作为 JavaScript 语言本身所拥有的一些特性。
   - 那么接下来我们来看一下作为窗口对象，它拥有哪些特性。
 
-## 4. Window 窗口对象
+## 5. Window 窗口对象
 
 - 事实上 window 对象上肩负的重担是非常大的：
   - 第一：包含大量的属性，localStorage、console、location、history、screenX、scrollX 等等（大概 60+个属性）；
@@ -191,7 +264,7 @@ console.log(obj);
   - 点踩符号：表示这个 API 不属于 W3C 规范，某些浏览器有实现（所以兼容性的问题）；
   - 实验符号：该 API 是实验性特性，以后可能会修改，并且存在兼容性问题；
 
-## 5. window 常见的属性
+## 6. window 常见的属性
 
 - 我们来看一下常见的 window 属性：
 
@@ -215,7 +288,7 @@ console.log(window.outerHeight);
 console.log(window.innerHeight);
 ```
 
-## 6. window 常见的方法
+## 7. window 常见的方法
 
 ```js
 // 2.常见的方法
@@ -232,7 +305,7 @@ scrollBtn.onclick = function () {
 
 ![image-20220617200548649](29-Cookie-BOM浏览器操作.assets/image-20220617200548649.png)
 
-## 7. window 常见的事件
+## 8. window 常见的事件
 
 ![image-20220617200556679](29-Cookie-BOM浏览器操作.assets/image-20220617200556679-16554675569891.png)
 
@@ -259,7 +332,7 @@ window.onhashchange = function () {
 };
 ```
 
-## 8. EventTarget
+## 9. EventTarget
 
 - Window 继承自 EventTarget，所以会继承其中的属性和方法：
   - addEventListener：注册某个事件类型以及事件处理函数；
@@ -293,7 +366,7 @@ window.dispatchEvent(new Event('coderwhy'));
 
 ![image-20220617201030071](29-Cookie-BOM浏览器操作.assets/image-20220617201030071.png)
 
-## 9. Location 对象常见的属性
+## 10. Location 对象常见的属性
 
 - Location 对象用于表示 window 上当前链接到的 URL 信息。
 
@@ -314,7 +387,7 @@ window.dispatchEvent(new Event('coderwhy'));
 
   - origin：就是我们的协议加上主机地址就是我们的源
 
-## 10. Location 对象常见的方法
+## 11. Location 对象常见的方法
 
 - 我们会发现 location 其实是 URL 的一个抽象实现：
 
@@ -346,7 +419,7 @@ location.reload(false);
   - replace：打开一个新的 URL，并且跳转到该 URL 中（不同的是不会在浏览记录中留下之前的记录）；
   - reload：重新加载页面，可以传入一个 Boolean 类型；
 
-## 11. history 对象常见属性和方法
+## 12. history 对象常见属性和方法
 
 - history 对象允许我们访问浏览器曾经的会话历史记录。
   - 有两个属性：
