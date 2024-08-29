@@ -70,7 +70,7 @@ Cache-Control: public, max-age: 6,s-maxage: 6
 
 协商缓存就是在使用本地缓存之前，需要**向服务器发起一次GET请求**，与之协商当前浏览器保存的本地缓存是否已经过期。
 
-客户端无法知道缓存是否过期，需要请求一次，向服务器确认有效的协商缓存。而这次请求中，携带的响应头里有`if-modified-since`，这个属性的值来自于上次响应的`last-modified`。浏览器在请求时，会自动将上一次的`last-modified`赋值给`ifmodified-since`。
+客户端无法知道缓存是否过期，需要请求一次，向服务器确认有效的协商缓存。而这次请求中，携带的响应头里有`if-modified-since`，这个属性的值来自于上次响应的`last-modified`。浏览器在请求时，会自动将上一次的`last-modified`赋值给`if-modified-since`。
 
 服务器会根据根据`if-modified-since`与资源最新时间比较，然后时间相同，返回304，表示缓存可用，不行就把新资源返回。
 
