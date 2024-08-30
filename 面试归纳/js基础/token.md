@@ -19,10 +19,142 @@
 
 ## 生成 token
 
-+ JWT生成的Token由三部分组成（header 、payload、signature）：
-  + header：
-    + alg：采用的加密算法，默认是 HMAC SHA256（HS256），采用同一个密钥进行 加密和解密； 
-    + typ：JWT，固定值，通常都写成JWT即可； 
-    + 会通过base64Url算法进行编码；
-  + payload：
-    + 携带的数据，
+- JWT 生成的 Token 由三部分组成（header 、payload、signature）：
+  - header：
+    - alg：采用的加密算法，默认是 HMAC SHA256（HS256），采用同一个密钥进行 加密和解密；
+    - typ：JWT，固定值，通常都写成 JWT 即可；
+    - 会通过 base64Url 算法进行编码；
+  - payload：
+    - 携带的数据，比如我们可以将用户的 id 和 name 放到 payload 中；
+    - 默认也会携带 iat（issued at），令牌的签发时间；
+    - 我们也可以设置过期时间：exp（expiration time）；
+    - 会通过 base64Url 算法进行编码
+  - signature（签名）：
+    - 设置一个 secretKey，通过将前两个的结果合并后进行 HMACSHA256 的算法；
+    - signature = HMACSHA256(base64Url(header)+.+base64Url(payload), secretKey);
+    - HS256 是对称加密（它的密钥同时用于加密解密），所以 secretKey 暴露是一件非常危险的事情，因为之后就可以模拟颁发 token，也可以解密 token；
+- 最终 token = header.payload.signature
+
+- 对称加密，加密解密用的哦都是同一个 key，非对称加密反之。
+- 一般颁发的时候使用的 secretKey 叫做私钥（privateKey）。解密用的叫做公钥（publicKey）,公钥只能做到解密，做不到加密颁发 token
+
+```js
+const Koa = require('koa');
+const Router = require('koa-router');
+const jwt = require('jsonwebtoken');
+
+const app = new Koa();
+const testRouter = new Router();
+
+const SECRET_KEY = 'abccba123';
+
+// 登录接口
+testRouter.post('/test', (ctx, next) => {
+  const user = { id: 110, name: 'why' };
+  // 1. 在token中header是有默认值的，所以jwt中没有让传，直接第一个传payload
+  // 2. jwt中会自动给payload设置令牌签发时间，所以不需要给
+  // 3. token中，需要一个secretKey,所以jwt中需要传出
+  // 4. token中payload中要传入过期时间，在jwt中，作为第三个options中设置
+  const token = jwt.sign(user, SECRET_KEY, {
+    // 单位秒
+    expiresIn: 10,
+  });
+
+  // 返回token
+  ctx.body = token;
+});
+
+// 验证接口
+testRouter.get('/demo', (ctx, next) => {
+  // 拿到token
+  const authorization = ctx.headers.authorization;
+  // 正常的authorization会带上`Bearer `需要进行截取
+  const token = authorization.replace('Bearer ', '');
+
+  try {
+    // jwt.verify用于验证token的有效性，需要传入SECRET_KEY
+    // jwt如果验证失效，直接抛出错误。所以需要使用try catch
+    const result = jwt.verify(token, SECRET_KEY);
+    ctx.body = result;
+  } catch (error) {
+    console.log(error.message);
+    ctx.body = 'token是无效的~';
+  }
+});
+
+app.use(testRouter.routes());
+app.use(testRouter.allowedMethods());
+
+app.listen(8080, () => {
+  console.log('服务器启动成功~');
+});
+```
+
+```shell
+# 使用openssl生成密钥
+# genrsa 表示根据rsa算法生成私钥
+# -out 表示输出
+# -in 表示输入
+# private.key 表示输出的文件名
+# 1024 可以指定生成的私钥长度
+openssl genrsa -out private.key 1024
+
+# 根据私钥生成公钥
+openssl rsa -in private.key -pubout -out public.key
+```
+
+```js
+// 与上面得代码的不同得是，需要指定加密算法 algorithm: 'RS256'
+const Koa = require('koa');
+const Router = require('koa-router');
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const { pathToFileURL } = require('url');
+
+const app = new Koa();
+const testRouter = new Router();
+
+// 在项目中的任何一个地方的相对路径, 都是相对于process.cwd()
+console.log(process.cwd());
+
+const PRIVATE_KEY = fs.readFileSync('./keys/private.key');
+const PUBLIC_KEY = fs.readFileSync('./keys/public.key');
+
+// 登录接口
+testRouter.post('/test', (ctx, next) => {
+  const user = { id: 110, name: 'why' };
+  const token = jwt.sign(user, PRIVATE_KEY, {
+    expiresIn: 10,
+    // 需要指定算法
+    algorithm: 'RS256',
+  });
+
+  ctx.body = token;
+});
+
+// 验证接口
+testRouter.get('/demo', (ctx, next) => {
+  const authorization = ctx.headers.authorization;
+  const token = authorization.replace('Bearer ', '');
+
+  try {
+    const result = jwt.verify(token, PUBLIC_KEY, {
+      // 解密得时候，也要记得传入解密得算法是rsa。这里传数组
+      algorithms: ['RS256'],
+    });
+    ctx.body = result;
+  } catch (error) {
+    console.log(error.message);
+    ctx.body = 'token是无效的~';
+  }
+});
+
+app.use(testRouter.routes());
+app.use(testRouter.allowedMethods());
+
+app.listen(8080, () => {
+  console.log('服务器启动成功~');
+});
+```
+
+## 如何无感刷新 token
