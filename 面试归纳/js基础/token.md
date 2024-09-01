@@ -14,18 +14,18 @@
   - 这个令牌作为后续用户访问一些接口或者资源的凭证；
   - 我们可以根据这个凭证来判断用户是否有权限来访问；
 - 所以 token 的使用应该分成两个重要的步骤：
-  - 生成 token：登录的时候，颁发 token；
+  - 生成 token：登录的时候，颁发 token； 
   - 验证 token：访问某些资源或者接口时，验证 token；
 
 ## 生成 token
 
 - JWT 生成的 Token 由三部分组成（header 、payload、signature）：
-  - header：
+  - header：由啊alg、typ组成的一个对象后经过base64转换后就是我们的header
     - alg：采用的加密算法，默认是 HMAC SHA256（HS256），采用同一个密钥进行 加密和解密；
     - typ：JWT，固定值，通常都写成 JWT 即可；
     - 会通过 base64Url 算法进行编码；
   - payload：
-    - 携带的数据，比如我们可以将用户的 id 和 name 放到 payload 中；
+    - 携带的数据放到 payload 中；
     - 默认也会携带 iat（issued at），令牌的签发时间；
     - 我们也可以设置过期时间：exp（expiration time）；
     - 会通过 base64Url 算法进行编码
