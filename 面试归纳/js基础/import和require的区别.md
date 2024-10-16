@@ -25,3 +25,5 @@
 - `commonjs`是运行时加载，`es6`是编译时输出接口；
 
 require 是一个 cjs 导入语法。import 是 ES6 提供得一个接口命令用来导入。
+
+推荐使用 import，因为有静态分析，webpack 依赖静态分析进行变量提升，以及更好的 tree shaking。
