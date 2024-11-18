@@ -1139,8 +1139,10 @@ const obj = reactive({
 })
 ```
 
+## 8. 完整代码
+
 ```js
-// 完整代码
+// 
 // 保存当前需要收集的响应式函数
 let activeReactiveFn = null
 
@@ -1247,7 +1249,7 @@ foo.name = "bar"
 
 ```
 
-## 8. 总结
+## 9. 总结
 
 1. 使用reactive的时候会创建一个Proxy实例，并返回代理对象
 2. 函数第一次执行的时候，进入到Proxy中get捕获器，在这里会创建Depend并收集依赖，创建映射关系Map，属性和Set数据结构，里面存放使用该属性的方法。
@@ -1255,7 +1257,7 @@ foo.name = "bar"
 
 + 这就是基本的响应式流程
 
-## 9. vue2响应式原理
+## 10. vue2响应式原理
 
 + Vue2用的是Object.defineProerty
 + Object.defineProerty每次只能对一个属性进行修改描述符，因此需要对对象进行遍历，进行每一个修改
