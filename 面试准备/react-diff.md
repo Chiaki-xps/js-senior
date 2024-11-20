@@ -6,8 +6,8 @@
 4. 相同的情况下就直接复用，新的 filer 的 props 直接给到旧的 fiber 里去，减少创建的过程
 5. 不同的话，删除旧的节点，创建新的节点
 6. key 的设计就是复用 DOM。
-7. 单个节点,第一次遍历的同一层挨个比较key.
-8. 多节点,在第二轮的时候,去身下的map集合里找.
+7. 单个节点,第一次遍历的同一层挨个比较 key.
+8. 多节点,在第二轮的时候,去身下的 map 集合里找.
 
 ```js
 https://juejin.cn/post/7203254152189083705
@@ -37,27 +37,28 @@ https://juejin.cn/post/7203254152189083705
 ### 3. react diff 算法
 
 1. diff 就是当前的 fiber 树和 JSX 对象进行比较，生成进行的 fiber 树。（current Fiber Tree 和 workInProgress Fiber Tree）
-2. react为了优化diff性能，做了一些diff限制
+2. react 为了优化 diff 性能，做了一些 diff 限制
 3. react 只做同层级的比较。（同层相当于兄弟节点）（降低比较复杂度）
 4. 元素类型不同的话，直接重新创建
 
-具体diff
+具体 diff
 
-1. 只有一个节点的diff：
-   1. 通过一个循环兄弟节点，一个个比较key（没有设置key，值为null），再比较类型。相同复用。不能复用的旧标记DOM删除，返回一个新的fiber
+1. 只有一个节点的 diff：
 
-1. 多个元素的diff
+   1. 通过一个循环兄弟节点，一个个比较 key（没有设置 key，值为 null），再比较类型。相同复用。不能复用的旧标记 DOM 删除，返回一个新的 fiber
 
-   1. 因为fiber最终形成链表，无法使用双指针优化
+1. 多个元素的 diff
+
+   1. 因为 fiber 最终形成链表，无法使用双指针优化
    2. 所以要做两轮遍历
    3. 第一轮处理更新节点
    4. 第二轮处理不剩下更新的节点
 
-   + 第一轮遍历
-     1. 相同位置遍历，直到不可复用位置。如果两边都存在没有遍历完成,标记一个lastPlacedIndex。
-     2. 当两边都没遍历，就会开始第二轮，有key的话用key，没有key会用index，表示同一个位置的比较.
-     3. 找到相同的key的,可以复用的fiber的index和比较留下的lastPlacedIndex比较.
-     4. oldIndex比较lastPlacedIndex就不需要移动了.比他小就要移动.可以想象成一个成一个插入排序的感觉,就是一个一个抽出来比较.
+   - 第一轮遍历
+     1. 相同位置遍历，直到不可复用位置。如果两边都存在没有遍历完成,标记一个 lastPlacedIndex。
+     2. 当两边都没遍历，就会开始第二轮，有 key 的话用 key，没有 key 会用 index，表示同一个位置的比较.
+     3. 找到相同的 key 的,可以复用的 fiber 的 index 和比较留下的 lastPlacedIndex 比较.
+     4. oldIndex 比较 lastPlacedIndex 就不需要移动了.比他小就要移动.可以想象成一个成一个插入排序的感觉,就是一个一个抽出来比较.
      5. 这样做就可以减少节点的移动.
 
 ```http
@@ -70,8 +71,8 @@ https://juejin.cn/post/7407370502416891956
 https://juejin.cn/post/7390934048259768331
 ```
 
-### 4. react的diff和vue的diff
+### 4. react 的 diff 和 vue 的 diff
 
-+ jsx中children最终会装成fiber，react的diff因为fiber的结构使用了单向链表。
-+ 正常如果用数组遍历为了提高效率，会使用头尾指针
-+ 但是单向链表是使用不了。
+- jsx 中 children 最终会装成 fiber，react 的 diff 因为 fiber 的结构使用了单向链表。
+- 正常如果用数组遍历为了提高效率，会使用头尾指针
+- 但是单向链表是使用不了。
