@@ -14,12 +14,12 @@
 **this：**
 
 - import 中模块 this 为 undefined
-- require 中 this 指向的是 exports。而因为`exports =module.exports`，也可以所指向`module.exports`
+- require 中 this 指向的是 exports。而因为`exports =module.exports`，也可以所指向`module.exports`。require 相当于 node 的 module 读写当前文件
 
 **输出：**
 
 - `commonjs` 输出的，是一个值的拷贝，而`es6`输出的是值的引用；
-  - require 引入得时候相当于拷贝值，import 命令引入得时候，直接拿到值得引用。
+  - require 引入的时候相当于拷贝值，import 命令引入的时候，直接拿到值的引用。
   - `const 变量 = require(模块)`。得到模块导出赋值给变量
   - `import 变量 form 模块`。模块中导出放入到变量中
 - `commonjs`是运行时加载，`es6`是编译时输出接口；
