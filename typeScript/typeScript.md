@@ -14,14 +14,14 @@ tsc -w
 
 ```typescript
 // 1.基本数据类型（Tip：Symbol是基本数据类型的一种）
-let str: string = 'string';
+let str: string = "string";
 let num: number = 1;
 let bool: boolean = true;
 let u: undefined = undefined;
 let n: null = null;
-let obj: object = { name: 'chiaki' };
+let obj: object = { name: "chiaki" };
 let big: bigint = 100n;
-let sym: symbol = Symbol('me');
+let sym: symbol = Symbol("me");
 ```
 
 ## 3. null 和 undefined 是所有类型的子类型
@@ -50,12 +50,12 @@ num = big; // 报错
 ## 5. 定义数组
 
 ```typescript
-let arr: string[] = ['1', '2', '3'];
+let arr: string[] = ["1", "2", "3"];
 let arr1: number[] = [1, 2, 3];
 
-let arr3: Array<string> = ['1', '2', '3'];
+let arr3: Array<string> = ["1", "2", "3"];
 
-let arr4: (string | number)[] = ['1', 2];
+let arr4: (string | number)[] = ["1", 2];
 ```
 
 ## 6. 函数
@@ -97,7 +97,7 @@ function myName(name?: string) {
 }
 
 // 参数默认值
-function myName1(name: string = 'chiaki') {
+function myName1(name: string = "chiaki") {
   return name;
 }
 
@@ -115,7 +115,7 @@ function foo1(num: number, ...argNums: number[]) {}
 type Types = number | string;
 function add(x: string, y: string): string;
 function add(x: Types, y: Types) {
-  if (typeof x === 'string' || typeof y === 'string') {
+  if (typeof x === "string" || typeof y === "string") {
     return x.toString() + y.toString();
   }
   return x + y;
@@ -130,7 +130,7 @@ function add(x: Types, y: Types) {
 - js 是没有元组，如果超出的解构，会被认为是 undefined,但是 TS 中会报错.赋值也同样
 
 ```typescript
-let arr: [number, string] = [1, 'xps'];
+let arr: [number, string] = [1, "xps"];
 
 arr = [1, 2]; // Error
 arr = [1]; // 目标两个元素
@@ -139,17 +139,17 @@ arr = [1]; // 目标两个元素
 - **可选类型：**在类型后面加个`?`表示可选元素
 
 ```typescript
-let arr: [number, string?] = [1, 'xps'];
+let arr: [number, string?] = [1, "xps"];
 
 arr = [1]; // 正确
-arr = [2, 'chiaki']; // 正确
+arr = [2, "chiaki"]; // 正确
 arr = [2, 3]; // Error
 ```
 
 - **剩余元素：**剩余元素语法`...arg`，此时`arg`是数组类型
 
 ```typescript
-const arr: [number, ...string[]] = [1, 'a', 'b'];
+const arr: [number, ...string[]] = [1, "a", "b"];
 ```
 
 - **只读元组：**`readonly`
@@ -195,9 +195,9 @@ function loop(): never {
 type Foo = string | number;
 
 function controlFlowAnalysisWithNever(foo: Foo) {
-  if (typeof foo === 'string') {
+  if (typeof foo === "string") {
     // 这里 foo 被收窄为 string 类型
-  } else if (typeof foo === 'number') {
+  } else if (typeof foo === "number") {
     // 这里 foo 被收窄为 number 类型
   } else {
     // foo 在这里是 never
@@ -284,7 +284,7 @@ const arr3: number | undefined = arr.find((num) => num > 2);
 const arr4: number = arr.find((num) => num > 2) as number;
 
 // 类型断言的两种语法
-let value: any = 'this is a string';
+let value: any = "this is a string";
 // 在变量前面使用尖括号,表示必定是 string 类型
 let strLength: number = (<string>value).length;
 // 在变量后面 as 指定, 必然是当前类型(推荐)
@@ -292,7 +292,7 @@ let strLength: number = (value as string).length;
 ```
 
 ```typescript
-let a = '1' as const; // a的类型是字符串字面量 '1'
+let a = "1" as const; // a的类型是字符串字面量 '1'
 ```
 
 ## 15. 非空断言`x!`
@@ -331,10 +331,10 @@ let x!: number;
 - 支持三种字面量,字符串 数字 布尔字面量
 
 ```typescript
-let str: 'xps' | 'chiaki' | 1;
+let str: "xps" | "chiaki" | 1;
 
 str = 1;
-str = 'xps';
+str = "xps";
 str = 2; // 报错：不在字面量类型里
 ```
 
@@ -344,9 +344,9 @@ str = 2; // 报错：不在字面量类型里
 - let 定义的变量是**可变**的，所以会进行类型拓宽为它的父类型
 
 ```typescript
-const str = 'i am xps'; // 推断str的类型是'i am xps'
+const str = "i am xps"; // 推断str的类型是'i am xps'
 
-let str2 = 'i am chiaki'; // 推断str2类型是 string
+let str2 = "i am chiaki"; // 推断str2类型是 string
 ```
 
 ## 19. 类型拓宽(Type Widening)
@@ -360,7 +360,7 @@ let age; // 类型为any
 age = 12; // 类型为any
 
 let x = null; // 类型为null
-x = 'boy'; // 严格模式下报错，x类为null
+x = "boy"; // 严格模式下报错，x类为null
 
 let y = undefined;
 y = 123; // 不能将类型“123”分配给类型“undefined”
@@ -374,11 +374,11 @@ interface Vector3 {
   z: number;
 }
 
-function getComponent(vector: Vector3, axis: 'x' | 'y' | 'z') {
+function getComponent(vector: Vector3, axis: "x" | "y" | "z") {
   return vector[axis];
 }
 
-let x = 'x';
+let x = "x";
 let vec = { x: 10, y: 20, z: 30 };
 // 类型“string”的参数不能赋给类型“"x" | "y" | "z"”的参数。
 // 原因是传入的x类型是string，但是对于TS来说，期望是一个明确的字面量类型。所以报错
@@ -413,7 +413,7 @@ type obj = { age: number } & { name: string };
 
 const obj: obj = {
   age: 18,
-  name: 'xps',
+  name: "xps",
 };
 ```
 
@@ -463,9 +463,9 @@ interface Person {
 // 所有确定属性的类型都必须是可选属性的子类型。
 // 但是age是number类型
 let tom: Person = {
-  name: 'Tom',
+  name: "Tom",
   age: 25, // 报错
-  gender: 'male',
+  gender: "male",
 };
 
 // 解决办法，使用联合类型
@@ -503,7 +503,7 @@ interface Person {
 function logName(person: Person) {
   console.log(person.name);
 }
-const xps = { name: 'xps', age: 18 };
+const xps = { name: "xps", age: 18 };
 // 不报错，对于logName中person，需要的是name。你能提供name，即使你的类型不是Person，也会当作Person使用，然后绕开多余的检测
 logName(xps);
 ```
@@ -522,7 +522,7 @@ interface Person {
 }
 
 const xps = {
-  name: 'xps',
+  name: "xps",
   age: 18,
 } as Person; // 当作Person使用
 ```
@@ -536,7 +536,7 @@ interface Props {
 }
 
 let p: Props = {
-  name: 'xps',
+  name: "xps",
 
   // girl是任意属性，任意属性要求类型any
   girl: false,
@@ -668,7 +668,7 @@ interface Animal {
   name: string;
 }
 
-const animal: Animal = { name: '动物' };
+const animal: Animal = { name: "动物" };
 
 type Person = typeof animal;
 
@@ -696,8 +696,8 @@ interface Person {
 type K1 = keyof Person; // "name" | "age"
 type K2 = keyof Person[]; // "length" | "toString" | "pop" | "push" | "concat"...
 
-const k1: K1 = 'methods';
-const k2: K2 = 'length';
+const k1: K1 = "methods";
+const k2: K2 = "length";
 
 // type K3 = number | string
 type K3 = keyof { [x: string]: string };
@@ -738,7 +738,7 @@ function prop<T extends object, K extends keyof T>(obj: T, key: K) {
 - 遍历枚举类型
 
 ```typescript
-type Keys = 'a' | 'b' | 'c';
+type Keys = "a" | "b" | "c";
 
 type Obj = {
   [key in Keys]: any;
@@ -756,24 +756,219 @@ type Obj = {
 
 - extend 在 TS 中主要两个用法，一个是接口继承和条件判断。
 
-## 5. infer
+### 5. infer
 
 - TS 中，infer 关键字用于在条件类型中推断类型。
+- 常用的格式是`T extend infer U ? U : never`
+  - `T extend infer U `是判断条件，例如`T extend <infer U>[]`
+  - T 如何数组的格式，那么判断为 true，然后 infer 定义了一个变量 U（用来接收推断出来的结果），T 是数组，然后推断这个数组里的元素类型出来，然后赋值给 U。
+  - 如果 U 存在返回 U，不存在 never
 
 ```typescript
+// 数组中提取类型
+type ElementType<T> = T extends (infer U)[] ? U : never;
 
+type ItemType = ElementType<string[]>; // string
+type AnotherItemType = ElementType<number[]>; // number
+type NotArrayType = ElementType<number>; // never
 ```
 
-```typescript
+```ts
+// 函数中提取类型
+type ReturnTypeOf<T> = T extends (...args: any[]) => infer R ? R : never;
 
+type Fn = (x: number, y: string) => boolean;
+
+type Result = ReturnTypeOf<Fn>; // boolean
 ```
 
-```typescript
+```ts
+// 函数中提取类型
+type ResolvedType<T> = T extends Promise<infer U> ? U : never;
 
+type ResultType = ResolvedType<Promise<number>>; // number
 ```
 
-```typescript
+### 6. extends
 
+- 类型约束
+
+```ts
+// 约束T类型
+function hasLength<T extends { length: number }>(item: T): number {
+  return item.length;
+}
+```
+
+- 继承接口或类
+
+```ts
+interface Animal {
+  name: string;
+  move(): void;
+}
+
+interface Dog extends Animal {
+  bark(): void;
+}
+```
+
+- 条件类型
+
+```ts
+// T 是 U的子类型。返回X，否则Y
+T extends U ? X : Y
+```
+
+- 用来继承其他类型
+
+### 7. 索引类型 T[K]
+
+```ts
+// 根据key拿到对象对应key的值
+function getValues<T, K extends keyof T>(obj: T, keys: K[]): T[K] {}
+```
+
+### 8. 映射类型
+
+- 根据旧的类型创建出新的类型, 我们称之为映射类型
+
+```ts
+type OptionalTestInterface<T> = {
+  [p in keyof T]+?: T[p];
+};
+```
+
+### 9. partial
+
+- 所有属性转成可选的
+
+```ts
+type Partial<T> = {
+  [P in keyof T]?: T[P];
+};
+
+// 如果传入的是对象，会递归把对象里的也同样转成可选类型
+type DeepPartial<T> = {
+  // 如果是 object，则递归类型
+  [U in keyof T]?: T[U] extends object ? DeepPartial<T[U]> : T[U];
+};
+```
+
+### 10. Required
+
+- Required 将类型的属性变成必选
+
+```ts
+type Required<T> = {
+  [P in keyof T]: T[P];
+};
+```
+
+### 11. Readonly
+
+- `Readonly<T>`的作用是将某个类型所有属性变为只读属性，也就意味着这些属性不能被重新赋值。
+
+```ts
+type Readonly<T> = {
+  readonly [p in keyof T]: T[p];
+};
+```
+
+### 12. Pick
+
+- Pick 从某个类型中挑出一些属性出来
+
+```ts
+type Pick<T, K extends keyof T> = {
+  [P in K]: T[P];
+};
+
+// 例子
+type TodoPreview = Pick<Todo, "title" | "completed">;
+```
+
+### 13. Record
+
+- `Record<K extends keyof any, T>` 的作用是将 `K` 中所有的属性的值转化为 `T` 类型。
+
+```ts
+type Record<K extends keyof any, T> = {
+  [P in K]: T;
+};
+```
+
+### 14. ReturnType
+
+- 用来得到一个函数的返回值类型
+
+```ts
+type ReturnType<T extends (...args: any[]) => any> = T extends (
+  ...args: any[]
+) => infer R
+  ? R
+  : any;
+
+// 代码解释
+// 1. 先把 type 结构看着这样 type ReturnType<A> = A
+// 2. <T extends (...args: any[]) => any>
+// 这里约束了 T 的类型必须是 函数类型
+// 3. T extends (...args: any[]) => infer R 。T被约束成一个函数，然后infer定义了一个变量 R， 在函数的返回值位置上，所以R代表函数T的返回值。
+// 4. 最后 extends，只要T符合extends携带的表达式，那么就返回R，
+```
+
+### 15. Exclude
+
+- `Exclude<T, U>` 的作用是将某个类型中属于另一个的类型移除掉。
+
+```ts
+type Exclude<T, U> = T extends U ? never : T;
+```
+
+### 16. Extract
+
+- `Extract<T, U>` 的作用是从 `T` 中提取出 `U`。
+
+```ts
+type Extract<T, U> = T extends U ? T : never;
+```
+
+### 17. Omit
+
+- `Omit<T, K extends keyof any>` 的作用是使用 `T` 类型中除了 `K` 类型的所有属性，来构造一个新的类型。
+- 可以理解成从一个定义好的类型里排除某一个类型，然后得到一个新的类型
+
+```ts
+type Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>>;
+// Exclude将K类型从T中排除掉，得到的类型暂称A
+// Pick从T中将A的类型挑出来
+```
+
+### 18. NonNullable
+
+- `NonNullable<T>` 的作用是用来过滤类型中的 `null` 及 `undefined` 类型。
+
+```ts
+type NonNullable<T> = T extendsnull | undefined ? never : T;
+```
+
+### 19. Parameters
+
+- `Parameters<T>` 的作用是用于获得函数的参数类型组成的元组类型。
+- 事实上就是得到一个数字，里面的类型就是函数传入参数类型的集合。
+
+```ts
+type Parameters<T extends (...args: any) => any> = T extends (
+  ...args: infer P
+) => any
+  ? P
+  : never;
+
+// 示例
+type A = Parameters<() => void>; // []
+type B = Parameters<typeof Array.isArray>; // [any]
+type C = Parameters<typeof parseInt>; // [string, (number | undefined)?]
+type D = Parameters<typeof Math.max>; // number[]
 ```
 
 ## 面试问题
@@ -783,4 +978,6 @@ type Obj = {
 
 ## 遗留问题
 
-- 怎么配置 tsconfig.json
+```http
+https://juejin.cn/post/7018805943710253086
+```
