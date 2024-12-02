@@ -102,7 +102,7 @@ Function.prototype.hybind = function(thisArg, ...argArray) {
   // 2.绑定this
   thisArg = (thisArg !== null && thisArg !== undefined) ? Object(thisArg): window
 
-  function fu'n proxyFn(...args) {
+  function proxyFn(...args) {
     // 3.将函数放到thisArg中进行调用
     // 这里是一个闭包了
     thisArg.fn = fn
