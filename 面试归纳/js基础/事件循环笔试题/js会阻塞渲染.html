@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1>Hello!</h1>
+    <button>change</button>
+
+    <div>
+      js的执行会阻塞渲染，所以点击按钮后，页面会停止渲染5s，然后才会显示Hi!
+      所以证明了渲染是单线程的 渲染要在js执行完后才会执行
+    </div>
+    <script>
+      var h1 = document.querySelector("h1");
+      var btn = document.querySelector("button");
+
+      // 死循环指定的时间
+      function delay(duration) {
+        var start = Date.now();
+        while (Date.now() - start < duration) {}
+      }
+
+      btn.onclick = function () {
+        h1.textContent = "Hi！";
+        delay(5000);
+      };
+    </script>
+  </body>
+</html>
