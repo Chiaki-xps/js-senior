@@ -221,7 +221,9 @@ https://juejin.cn/post/7136087057542086693
 
 ## 9. 浏览器上的兼容性问题？
 
-1. 配置 browserslist
+1. 用webpack之类的工程化工具下，很少单独处理兼容性问题
+1. 配置 browserslist、autoprefixer、babel、postcss-preset-env。会根据目标环境，进行转换
+1. 使用 BrowserStack  云平台做测试
 
 ### 盒子模型
 
