@@ -759,10 +759,20 @@ type Obj = {
 ### 5. infer
 
 - TS 中，infer 关键字用于在条件类型中推断类型。
+
+  + 想要让类型能够成立，通过上下文，infer去推断出U应该是什么才符合条件
+
 - 常用的格式是`T extend infer U ? U : never`
-  - `T extend infer U `是判断条件，例如`T extend <infer U>[]`
-  - T 如何数组的格式，那么判断为 true，然后 infer 定义了一个变量 U（用来接收推断出来的结果），T 是数组，然后推断这个数组里的元素类型出来，然后赋值给 U。
-  - 如果 U 存在返回 U，不存在 never
+  1. `T extend infer U `是判断条件，
+  
+  2. T 如果传入 number 数组类型，想要让条件类型成立，那么利用 infer 推导出一个类型结果即 U 也是 number 类型，这样也能类型成立
+
++ 例子：`T extend <infer U>[] ? U : nerver`
+  1. 假如 T 传入 number[]，那么想要类型推到成功，那么 U 应该是 number
+  2. 所以如果类型传入是 number[]，返回的是一个number
+  3. 如果传入的是一个number，那么无论怎么推到 U 也没办法让条件成立，只能 nerver
+
+例子：
 
 ```typescript
 // 数组中提取类型
